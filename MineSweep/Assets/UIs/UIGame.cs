@@ -19,7 +19,7 @@ public class UIGame : MonoBehaviour {
     public Text txtTimer;
     public Toggle toggleIsTargetMine;
     
-        private int timer = -1;
+    private int timer = -1;
     // Start is called before the first frame update
     
     public  void StartGame(){
