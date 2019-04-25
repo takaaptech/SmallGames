@@ -44,6 +44,7 @@ public class LevelManager : BaseManager {
         }
     }
 
+
     private static string TILE_MAP_NAME_BORN_POS = "BornPos";
     public string GetMapPath(int level){
         return "Maps/Level" + level;

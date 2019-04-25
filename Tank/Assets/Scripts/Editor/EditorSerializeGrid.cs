@@ -22,7 +22,5 @@ namespace Editor {
             AssetDatabase.Refresh();
             Debug.Log("Done");
         }
-
-       
     }
 }

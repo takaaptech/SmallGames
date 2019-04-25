@@ -6,6 +6,14 @@ public class TileInfos {
     public Vector2Int size;
     public ushort[] tileIDs;
 
+    public TileBase GetTile(Vector2Int pos){
+        var diff = pos - min;
+        if (diff.x > size.x || diff.y > size.y) {
+            return null;
+        }
+        var id = tileIDs[diff.y * size.y + diff.x];
+        return LevelManager.ID2Tile(id);
+    }
     public TileBase[] GetAllTiles(){
         var count = tileIDs.Length;
         var tiles = new TileBase[count];
