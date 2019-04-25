@@ -1,0 +1,5 @@
+1=Tiles/TileBrick
+2=Tiles/TileCamp
+3=Tiles/TileGrass
+4=Tiles/TileIron
+5=Tiles/TileWater
