@@ -1,8 +1,34 @@
 using UnityEngine;
+using UnityEngine.Tilemaps;
+
 public class TileInfos {
     public Vector2Int min;
     public Vector2Int size;
-    public ushort[] tiles;
+    public ushort[] tileIDs;
+
+    public TileBase[] GetAllTiles(){
+        var count = tileIDs.Length;
+        var tiles = new TileBase[count];
+        for (int i = 0; i < count; i++) {
+            tiles[i] = LevelManager.ID2Tile(tileIDs[i]);
+        }
+        return tiles;
+    }
+
+    public Vector3Int[] GetAllPositions(){
+        var poss = new Vector3Int[tileIDs.Length];
+        var sx = min.x;
+        var sy = min.y;
+        var sizex = size.x;
+        var sizey = size.y;
+        for (int y = 0; y < sizey; y++) {
+            for (int x = 0; x < sizex; x++) {
+                poss[y*sizex + x] = new Vector3Int(sx + x,sy + y,0);
+            }
+        }
+        return poss;
+    }
+    
 }
 
 public class GridInfo {
@@ -12,4 +38,15 @@ public class GridInfo {
     public int cellSwizzle;
     public TileInfos[] tileMaps;
     public string[] names;
+
+    public TileInfos GetMapInfo(string name){
+        if (names == null) return null;
+        for (int i = 0; i < names.Length; i++) {
+            if (names[i] == name) {
+                return tileMaps[i];
+            }
+        }
+
+        return null;
+    }
 }

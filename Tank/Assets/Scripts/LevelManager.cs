@@ -20,7 +20,6 @@ public class LevelManager : BaseManager {
     public void LoadGame(){
         CheckLoadTileIDMap();
         Main.gameMgr.StartGame();
-        Debug.LogError("tile2ID.count " + tile2ID.Count);
         var txt = Resources.Load<TextAsset>(GetMapPath(curLevel));
         if (txt == null) {
             Debug.LogError("Have no map file" + curLevel);
@@ -28,9 +27,24 @@ public class LevelManager : BaseManager {
         }
         var reader = new BinaryReader(new MemoryStream(txt.bytes));
         var info = TileMapSerializer.ReadGrid(reader);
-        int s = 0;
+        var go = GameObject.FindObjectOfType<Grid>();
+        if (go != null) {
+            var maps = go.GetComponentsInChildren<Tilemap>();
+            for (int i = 0; i < maps.Length; i++) {
+                var tileMap = maps[i];
+                var tileMapInfo = info.GetMapInfo(tileMap.name);
+                tileMap.ClearAllTiles();
+                tileMap.SetTiles(tileMapInfo.GetAllPositions(),tileMapInfo.GetAllTiles());
+                if (Application.isPlaying) {
+                    if (tileMap.name == TILE_MAP_NAME_BORN_POS) {
+                        tileMap.GetComponent<TilemapRenderer>().enabled = false;
+                    }
+                }
+            }
+        }
     }
 
+    private static string TILE_MAP_NAME_BORN_POS = "BornPos";
     public string GetMapPath(int level){
         return "Maps/Level" + level;
     }

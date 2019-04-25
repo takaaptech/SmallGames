@@ -9,10 +9,7 @@ namespace Editor {
     public class EditorSerializeGrid  {
         [UnityEditor.MenuItem("Tools/SerilizeCurGrid")]
         public static void DoSomething(){
-            var go = Selection.activeGameObject;
-            if (go == null) {
-                go = GameObject.FindObjectOfType<Grid>()?.gameObject;
-            }
+            var go = GameObject.FindObjectOfType<Grid>();
             if(go == null)
                 return;
             var grid = go.GetComponent<Grid>();
@@ -23,6 +20,7 @@ namespace Editor {
                 File.WriteAllBytes(Path.Combine(Application.dataPath,"Resources/Maps/"+sceneName+".bytes"),bytes);    
             }
             AssetDatabase.Refresh();
+            Debug.Log("Done");
         }
 
        

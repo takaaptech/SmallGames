@@ -3,3 +3,5 @@
 3=Tiles/TileGrass
 4=Tiles/TileIron
 5=Tiles/TileWater
+6=Tiles/TileBornPosEnemy
+7=Tiles/TileBornPosHero

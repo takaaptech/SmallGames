@@ -227,7 +227,7 @@ public class TileMapSerializer {
 
         var tiles = new ushort[totalCount];
         var retVal = new TileInfos();
-        retVal.tiles = tiles;
+        retVal.tileIDs = tiles;
         retVal.min = new Vector2Int(minx, miny);
         retVal.size = new Vector2Int(sizex, sizey);
 
@@ -239,7 +239,7 @@ public class TileMapSerializer {
 
         Dictionary<ushort, ushort> id2Tile = new Dictionary<ushort, ushort>();
         for (ushort i = 0; i < diffCount; i++) {
-            id2Tile[i] = tileRawIDs[i];
+            id2Tile[(ushort)(i+1)] = tileRawIDs[i];
         }
 
         if (isSaveWithOutPos) {
