@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+#if UNITY_EDITOR
+using UnityEditor;
+
+#endif
 
 [System.Serializable]
 public class LevelManager : BaseManager {
@@ -13,19 +16,32 @@ public class LevelManager : BaseManager {
     private static Dictionary<TileBase, ushort> tile2ID = new Dictionary<TileBase, ushort>();
 
     public static int curLevel = 1;
+
+
+    private static string TILE_MAP_NAME_BORN_POS = "BornPos";
+
+    public static string GetMapPathFull(int level){
+        return Path.Combine(Application.dataPath, "Resources/Maps/" + level + ".bytes");
+    }
+    
     public void OnSceneLoaded(){
         LoadGame();
     }
 
     public void LoadGame(){
-        CheckLoadTileIDMap();
         Main.gameMgr.StartGame();
-        var txt = Resources.Load<TextAsset>(GetMapPath(curLevel));
-        if (txt == null) {
-            Debug.LogError("Have no map file" + curLevel);
+        LoadLevel(curLevel);
+    }
+
+    public static void LoadLevel(int level){
+        CheckLoadTileIDMap();
+        var path = LevelManager.GetMapPathFull(level);
+        if (!File.Exists(path)) {
+            Debug.LogError("Have no map file" + level);
             return;
         }
-        var reader = new BinaryReader(new MemoryStream(txt.bytes));
+        var bytes = File.ReadAllBytes(path);
+        var reader = new BinaryReader(new MemoryStream(bytes));
         var info = TileMapSerializer.ReadGrid(reader);
         var go = GameObject.FindObjectOfType<Grid>();
         if (go != null) {
@@ -33,8 +49,10 @@ public class LevelManager : BaseManager {
             for (int i = 0; i < maps.Length; i++) {
                 var tileMap = maps[i];
                 var tileMapInfo = info.GetMapInfo(tileMap.name);
+                if(tileMapInfo== null)
+                    continue;
                 tileMap.ClearAllTiles();
-                tileMap.SetTiles(tileMapInfo.GetAllPositions(),tileMapInfo.GetAllTiles());
+                tileMap.SetTiles(tileMapInfo.GetAllPositions(), tileMapInfo.GetAllTiles());
                 if (Application.isPlaying) {
                     if (tileMap.name == TILE_MAP_NAME_BORN_POS) {
                         tileMap.GetComponent<TilemapRenderer>().enabled = false;
@@ -44,11 +62,24 @@ public class LevelManager : BaseManager {
         }
     }
 
-
-    private static string TILE_MAP_NAME_BORN_POS = "BornPos";
-    public string GetMapPath(int level){
-        return "Maps/Level" + level;
+    public static void SaveLevel(int level){
+        var go = GameObject.FindObjectOfType<Grid>();
+        if (go == null)
+            return;
+        var grid = go.GetComponent<Grid>();
+        if (grid == null) return;
+        var bytes = TileMapSerializer.SerializeGrid(grid, LevelManager.Tile2ID);
+        if (bytes != null) {
+            File.WriteAllBytes(LevelManager.GetMapPathFull(level), bytes);
+        }
+#if UNITY_EDITOR
+        if (!Application.isPlaying) {
+            AssetDatabase.Refresh();
+        }
+        Debug.LogFormat("SaveLevel {0} succ",level);
+#endif
     }
+
 
     public static ushort Tile2ID(TileBase tile){
 #if UNITY_EDITOR
@@ -69,7 +100,6 @@ public class LevelManager : BaseManager {
 #endif
         return id2Tiles[tile];
     }
-
 
     private static TileBase LoadTile(string relPath){
         var tile = Resources.Load<TileBase>(relPath);
