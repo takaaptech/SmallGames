@@ -9,37 +9,69 @@ using UnityEditor;
 #endif
 
 [System.Serializable]
-public class LevelManager : BaseManager {
+public class LevelManager : BaseManager<LevelManager> {
     private static bool hasLoadIDMapConfig = false; // 是否已经加载了配置
     private static string idMapPath = "TileIDMap";
     private static TileBase[] id2Tiles = new TileBase[65536]; //64KB
     private static Dictionary<TileBase, ushort> tile2ID = new Dictionary<TileBase, ushort>();
 
-    public static int curLevel = 1;
+    public int curLevel = 2;
 
 
     private static string TILE_MAP_NAME_BORN_POS = "BornPos";
+    private static string TILE_MAP_NAME_GRASS = "Grass";
 
     public static string GetMapPathFull(int level){
         return Path.Combine(Application.dataPath, "Resources/Maps/" + level + ".bytes");
     }
-    
+
     public void OnSceneLoaded(){
         LoadGame();
     }
 
-    public void LoadGame(){
-        Main.gameMgr.StartGame();
-        LoadLevel(curLevel);
+
+    public TileInfos GetMapInfo(string name){
+        return gridInfo.GetMapInfo(name);
     }
 
-    public static void LoadLevel(int level){
+    public GridInfo gridInfo;
+
+    public void LoadGame(){
+        gridInfo = LoadLevel(curLevel);
+        main.gameMgr.StartGame();
+    }
+
+    public TileBase Pos2Tile(Vector2Int pos, bool isCollider){
+        foreach (var tilemap in gridInfo.tileMaps) {
+            if (isCollider && !tilemap.hasCollider) continue;
+            var tile = tilemap.GetTile(pos);
+            if (tile != null)
+                return tile;
+        }
+
+        return null;
+    }
+
+    public ushort Pos2TileID(Vector2Int pos, bool isCollider){
+        for (int i = 0; i < gridInfo.tileMaps.Length; i++) {
+            var tilemap = gridInfo.tileMaps[i];
+            if (isCollider && !tilemap.hasCollider) continue;
+            var tile = tilemap.GetTileID(pos);
+            if (tile != 0)
+                return tile;
+        }
+
+        return 0;
+    }
+
+    public static GridInfo LoadLevel(int level){
         CheckLoadTileIDMap();
         var path = LevelManager.GetMapPathFull(level);
         if (!File.Exists(path)) {
             Debug.LogError("Have no map file" + level);
-            return;
+            return null;
         }
+
         var bytes = File.ReadAllBytes(path);
         var reader = new BinaryReader(new MemoryStream(bytes));
         var info = TileMapSerializer.ReadGrid(reader);
@@ -49,7 +81,7 @@ public class LevelManager : BaseManager {
             for (int i = 0; i < maps.Length; i++) {
                 var tileMap = maps[i];
                 var tileMapInfo = info.GetMapInfo(tileMap.name);
-                if(tileMapInfo== null)
+                if (tileMapInfo == null)
                     continue;
                 tileMap.ClearAllTiles();
                 tileMap.SetTiles(tileMapInfo.GetAllPositions(), tileMapInfo.GetAllTiles());
@@ -58,8 +90,15 @@ public class LevelManager : BaseManager {
                         tileMap.GetComponent<TilemapRenderer>().enabled = false;
                     }
                 }
+
+                if (tileMap.name == TILE_MAP_NAME_BORN_POS
+                    || tileMap.name == TILE_MAP_NAME_GRASS) {
+                    tileMapInfo.hasCollider = false;
+                }
             }
         }
+
+        return info;
     }
 
     public static void SaveLevel(int level){
@@ -76,7 +115,8 @@ public class LevelManager : BaseManager {
         if (!Application.isPlaying) {
             AssetDatabase.Refresh();
         }
-        Debug.LogFormat("SaveLevel {0} succ",level);
+
+        Debug.LogFormat("SaveLevel {0} succ", level);
 #endif
     }
 
@@ -100,6 +140,7 @@ public class LevelManager : BaseManager {
 #endif
         return id2Tiles[tile];
     }
+
 
     private static TileBase LoadTile(string relPath){
         var tile = Resources.Load<TileBase>(relPath);

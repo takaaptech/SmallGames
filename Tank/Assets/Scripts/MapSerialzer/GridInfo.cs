@@ -1,29 +1,60 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using System.Collections.Generic;
 
 public class TileInfos {
     public Vector2Int min;
     public Vector2Int size;
     public ushort[] tileIDs;
+    public TileBase[] allTiles;
+    public Vector3Int[] allPos;
+    public bool hasCollider = true;
 
     public TileBase GetTile(Vector2Int pos){
         var diff = pos - min;
-        if (diff.x > size.x || diff.y > size.y) {
+        if (diff.x <0 || diff.y <0|| diff.x >= size.x || diff.y >= size.y) {
             return null;
         }
-        var id = tileIDs[diff.y * size.y + diff.x];
+        var id = tileIDs[diff.y * size.x + diff.x];
         return LevelManager.ID2Tile(id);
+    }    
+    public ushort GetTileID(Vector2Int pos){
+        var diff = pos - min;
+        if (diff.x <0 || diff.y <0||diff.x >= size.x || diff.y >= size.y) {
+            return 0;
+        }
+        var id = tileIDs[diff.y * size.x + diff.x];
+        return id;
     }
+
+    public List<Vector2Int> GetAllTiles(TileBase type){
+        var lst = new List<Vector2Int>();
+        var tiles = GetAllTiles();
+        var poss = GetAllPositions();
+        var count = tiles.Length;
+        for (int i = 0; i < count; i++) {
+            if (tiles[i] == type) {
+                lst.Add(new Vector2Int(poss[i].x,poss[i].y));
+            }
+        }
+        return lst;
+    }
+
     public TileBase[] GetAllTiles(){
+        if (allTiles != null)
+            return allTiles;
         var count = tileIDs.Length;
         var tiles = new TileBase[count];
         for (int i = 0; i < count; i++) {
             tiles[i] = LevelManager.ID2Tile(tileIDs[i]);
         }
+        allTiles = tiles;
         return tiles;
     }
 
     public Vector3Int[] GetAllPositions(){
+        if (allPos != null)
+            return allPos;
         var poss = new Vector3Int[tileIDs.Length];
         var sx = min.x;
         var sy = min.y;
@@ -34,6 +65,7 @@ public class TileInfos {
                 poss[y*sizex + x] = new Vector3Int(sx + x,sy + y,0);
             }
         }
+        allPos = poss;
         return poss;
     }
     
@@ -46,7 +78,8 @@ public class GridInfo {
     public int cellSwizzle;
     public TileInfos[] tileMaps;
     public string[] names;
-
+    
+    
     public TileInfos GetMapInfo(string name){
         if (names == null) return null;
         for (int i = 0; i < names.Length; i++) {

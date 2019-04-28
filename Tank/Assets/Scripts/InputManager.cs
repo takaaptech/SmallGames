@@ -2,7 +2,7 @@ using UnityEngine;
 
 
 [System.Serializable]
-public class InputManager : BaseManager {
+public class InputManager : BaseManager<InputManager> {
     [HideInInspector] public float horizontal; //Float that stores horizontal input
     [HideInInspector] public float vertical; //Float that stores horizontal input
     [HideInInspector] public bool fireHeld; //Bool that stores jump pressed
@@ -12,8 +12,8 @@ public class InputManager : BaseManager {
 
     void ProcessInputs(){
         //Accumulate horizontal axis input
-        horizontal += Input.GetAxis("Horizontal");
-        vertical += Input.GetAxis("Vertical");
+        horizontal = Input.GetAxis("Horizontal");
+        vertical = Input.GetAxis("Vertical");
 
         //Accumulate button inputs
         firePressed = firePressed || Input.GetButtonDown("Jump");
@@ -30,12 +30,12 @@ public class InputManager : BaseManager {
         ProcessInputs();
 
         horizontal = Mathf.Clamp(horizontal, -1f, 1f);
-        vertical = Mathf.Clamp(horizontal, -1f, 1f);
+        vertical = Mathf.Clamp(vertical, -1f, 1f);
     }
 
-    public override void DoFixedUpdate(){
-        readyToClear = true;
-    }
+    //public override void DoFixedUpdate(){
+    //    readyToClear = true;
+    //}
 
     void ClearInput(){
         if (!readyToClear)
