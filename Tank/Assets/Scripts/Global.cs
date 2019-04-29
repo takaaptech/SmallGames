@@ -1,6 +1,9 @@
 public static class Global {
     public const string TileMapName_BornPos = "BornPos";
+    public const int TileID_Brick = 1;
     public const int TileID_Camp = 2;
+    public const int TileID_Iron = 4;
+    public const int TileID_Wall = 8;
     public const int TileID_BornPosEnemy = 6;
     public const int TileID_BornPosHero = 7;
     public static int CurGameLevel;

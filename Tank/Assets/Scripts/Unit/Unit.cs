@@ -3,8 +3,10 @@ using UnityEngine;
 
 
 public class Unit : MonoBehaviour {
+    /// <summary> 阵营</summary>
     public int camp; //阵营
-    public int health;
+
+    public int health = 100;
     public float moveSpd = 2;
     public float maxMoveSpd = 2;
     public EDir dir;
@@ -35,7 +37,7 @@ public class Unit : MonoBehaviour {
         return true;
     }
 
-    public void DoStart(){
+    public virtual void DoStart(){
         effectProxy.PlayEffectBorn(pos);
     }
 
@@ -74,7 +76,16 @@ public class Unit : MonoBehaviour {
         return maxMoveDist;
     }
 
-    public void DoUpdate(float deltaTime){
+    public static Vector2Int GetBorderDir(EDir dir){
+        var isUpDown = (int) (dir) % 2 == 0;
+        var borderDir = Vector2Int.up;
+        if (isUpDown) {
+            borderDir = Vector2Int.right;
+        }
+
+        return borderDir;
+    }
+    public virtual void DoUpdate(float deltaTime){
         //update position
         var dirVec = GetDirVec(dir);
         var moveDist = (moveSpd * deltaTime);
@@ -85,14 +96,7 @@ public class Unit : MonoBehaviour {
         var fTargetHead = pos + (TankRadius + moveDist) * (Vector2) dirVec;
         var fPreviewHead = pos + (TankRadius + PreviewHeadRadius) * (Vector2) dirVec;
 
-        var isUpDown = (int) (dir) % 2 == 0;
-        var borderDir = Vector2Int.up;
-        if (isUpDown) {
-            borderDir = Vector2Int.right;
-        }
-        if (this.name.Contains("Player")) {
-            int ss = 0;
-        }
+        var borderDir = GetBorderDir(dir);
         float maxMoveDist = moveSpd * deltaTime;
         var headPos = pos + (TankRadius) * (Vector2) dirVec;
         var dist = GetMaxMoveDist(headPos, fTargetHead, maxMoveDist, borderDir);
@@ -116,6 +120,7 @@ public class Unit : MonoBehaviour {
 
     public void DoDestroy(){
         effectProxy.PlayEffectDestory(pos);
+        GameObject.Destroy(gameObject);
     }
 
     private List<Vector3Int> debugInfo = new List<Vector3Int>();

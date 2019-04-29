@@ -16,8 +16,8 @@ public class InputManager : BaseManager<InputManager> {
         vertical = Input.GetAxis("Vertical");
 
         //Accumulate button inputs
-        firePressed = firePressed || Input.GetButtonDown("Jump");
-        fireHeld = fireHeld || Input.GetButton("Jump");
+        firePressed = Input.GetButtonDown("Jump");
+        fireHeld = Input.GetButton("Jump");
     }
 
 

@@ -41,7 +41,29 @@ public class LevelManager : BaseManager<LevelManager> {
         main.gameMgr.StartGame();
     }
 
-    public TileBase Pos2Tile(Vector2Int pos, bool isCollider){
+    public static Vector2Int Pos2TilePos(Vector2 pos){
+        return new Vector2Int(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y));
+    }
+
+    public TileBase Pos2Tile(Vector2 pos, bool isCollider){
+        return Pos2Tile(Pos2TilePos(pos), isCollider);
+    }
+
+    public ushort Pos2TileID(Vector2 pos, bool isCollider){
+        return Pos2TileID(Pos2TilePos(pos), isCollider);
+    }
+
+    public void ReplaceTile(Vector2 fpos, ushort srcID, ushort targetID){
+        var pos = Pos2TilePos(fpos);
+        foreach (var tilemap in gridInfo.tileMaps) {
+            var tile = tilemap.GetTileID(pos);
+            if (tile == srcID) {
+                tilemap.SetTileID(pos, targetID);
+            }
+        }
+    }
+
+    public TileBase Pos2TileIDPos2Tile(Vector2Int pos, bool isCollider){
         foreach (var tilemap in gridInfo.tileMaps) {
             if (isCollider && !tilemap.hasCollider) continue;
             var tile = tilemap.GetTile(pos);
@@ -83,6 +105,7 @@ public class LevelManager : BaseManager<LevelManager> {
                 var tileMapInfo = info.GetMapInfo(tileMap.name);
                 if (tileMapInfo == null)
                     continue;
+                tileMapInfo.tilemap = tileMap;
                 tileMap.ClearAllTiles();
                 tileMap.SetTiles(tileMapInfo.GetAllPositions(), tileMapInfo.GetAllTiles());
                 if (Application.isPlaying) {
@@ -98,8 +121,23 @@ public class LevelManager : BaseManager<LevelManager> {
             }
         }
 
+        var min = new Vector2Int(int.MaxValue, int.MaxValue);
+        var max = new Vector2Int(int.MinValue, int.MinValue);
+        foreach (var tempInfo in info.tileMaps) {
+            var tileMap = tempInfo.tilemap;
+            var mapMin = tileMap.cellBounds.min;
+            if (mapMin.x < min.x) min.x = mapMin.x;
+            if (mapMin.y < min.y) min.y = mapMin.y;
+            var mapMax = tileMap.cellBounds.max;
+            if (mapMax.x > max.x) max.x = mapMax.x;
+            if (mapMax.y > max.y) max.y = mapMax.y;
+        }
+
+        GameManager.Instance.min = min;
+        GameManager.Instance.max = max;
         return info;
     }
+
 
     public static void SaveLevel(int level){
         var go = GameObject.FindObjectOfType<Grid>();

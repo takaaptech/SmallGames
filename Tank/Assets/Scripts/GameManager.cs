@@ -37,16 +37,23 @@ public class GameManager : BaseManager<GameManager> {
     public List<GameObject> itemPrefabs = new List<GameObject>();
     public GameObject CampPrefab;
 
+    public const int EnemyCamp = 1;
+    public const int PlayerCamp = 2;
+
     public Tank CreateEnemy(Vector2Int pos, int type){
-        return CreateUnit(pos, tankPrefabs, type, Vector2.one, transParentEnemy, EDir.Down, allEnmey);
+        var unit = CreateUnit(pos, tankPrefabs, type, Vector2.one, transParentEnemy, EDir.Down, allEnmey);
+        unit.camp = EnemyCamp;
+        return unit;
     }
 
     public Tank CreatePlayer(Vector2Int pos, int type){
-        return CreateUnit(pos, tankPrefabs, type, Vector2.one, transParentPlayer, EDir.Up, allPlayer);
+        var unit = CreateUnit(pos, tankPrefabs, type, Vector2.one, transParentPlayer, EDir.Up, allPlayer);
+        unit.camp = PlayerCamp;
+        return unit;
     }
 
-    public void CreateBullet(Vector2 pos, EDir dir, Vector2 offset, int type){
-        CreateUnit(pos, bulletPrefabs, type, offset, transParentBullet, dir, allBullet);
+    public Bullet CreateBullet(Vector2 pos, EDir dir, Vector2 offset, int type){
+        return CreateUnit(pos, bulletPrefabs, type, offset, transParentBullet, dir, allBullet);
     }
 
     public void CreateItem(Vector2Int pos, Vector2 offset, int type){
@@ -57,24 +64,32 @@ public class GameManager : BaseManager<GameManager> {
     private T CreateUnit<T>(Vector2 pos, List<GameObject> lst, int type,
         Vector2 offset, Transform parent, EDir dir,
         List<T> set) where T : Unit{
-        Debug.Assert(type <= lst.Count, "type >= tankPrefabs.Count");
+        Debug.Assert(type <= lst.Count, "type >= lst.Count");
         var prefab = lst[type];
-        Debug.Assert(prefab != null, "tankPrefab == null");
+        Debug.Assert(prefab != null, "prefab == null");
         Vector2 createPos = pos + offset;
 
-        var go = GameObject.Instantiate(prefab, parent.position + (Vector3) createPos, Quaternion.identity, parent);
+        var deg = ((int) (dir)) * 90;
+        var rotation = Quaternion.Euler(0, 0, deg);
+
+        var go = GameObject.Instantiate(prefab, parent.position + (Vector3) createPos, rotation, parent);
         var unit = go.GetComponent<T>();
         unit.pos = createPos;
+        unit.dir = dir;
+        if (unit is Tank) {
+            unit.size = Vector2.one;
+            unit.radius = unit.size.magnitude;
+        }
+
         unit.DoStart();
         set.Add(unit);
-        var deg = ((int) (dir)) * 90;
-        unit.transform.rotation = Quaternion.Euler(0, 0, deg);
         return unit;
     }
 
     public void DestroyUnit<T>(T unit, List<T> lst) where T : Unit{
-        lst.Remove(unit);
-        unit.DoDestroy();
+        if (lst.Remove(unit)) {
+            unit.DoDestroy();
+        }
     }
 
     public Dictionary<Vector2Int, LinkedList<Bullet>>
@@ -89,10 +104,85 @@ public class GameManager : BaseManager<GameManager> {
 
     private void ColliderDetected(){
         // update Bounding box
+
+        HashSet<Unit> tempLst = new HashSet<Unit>();
         // bullet and tank
+        foreach (var bullet in allBullet) {
+            var bulletCamp = bullet.camp;
+            foreach (var tank in allPlayer) {
+                if (tank.camp != bulletCamp && IsCollided(bullet, tank)) {
+                    tempLst.Add(bullet);
+                    if (tank.TakeDamage(bullet)) {
+                        tempLst.Add(tank);
+                    }
+                }
+            }
+
+            foreach (var tank in allEnmey) {
+                if (tank.camp != bulletCamp && IsCollided(bullet, tank)) {
+                    tempLst.Add(bullet);
+                    if (tank.TakeDamage(bullet)) {
+                        tempLst.Add(tank);
+                    }
+                }
+            }
+        }
+
         // bullet and camp
         // bullet and map
+        foreach (var bullet in allBullet) {
+            var pos = bullet.pos;
+            Vector2 borderDir = Unit.GetBorderDir(bullet.dir);
+            var borderPos1 = pos + borderDir * bullet.radius;
+            var borderPos2 = pos - borderDir * bullet.radius;
+            CheckBulletWithMap(pos, tempLst, bullet);
+            CheckBulletWithMap(borderPos1, tempLst, bullet);
+            CheckBulletWithMap(borderPos2, tempLst, bullet);
+        }
+
+        // bullet bound detected 
+        foreach (var bullet in allBullet) {
+            if (IsOutOfBound(bullet.pos)) {
+                tempLst.Add(bullet);
+            }
+        }
+
         // tank   and item
+
+        foreach (var unit in tempLst) {
+            GameManager.Instance.DestroyUnit(unit as Bullet, GameManager.Instance.allBullet);
+            GameManager.Instance.DestroyUnit(unit as Tank, GameManager.Instance.allPlayer);
+            GameManager.Instance.DestroyUnit(unit as Tank, GameManager.Instance.allEnmey);
+        }
+    }
+
+    void CheckBulletWithMap(Vector2 pos, HashSet<Unit> tempLst, Unit bullet){
+        var id = LevelManager.Instance.Pos2TileID(pos, true);
+        if (id != 0) {
+            //collide bullet with world
+            if (id == Global.TileID_Brick) {
+                LevelManager.Instance.ReplaceTile(pos, id, 0);
+                tempLst.Add(bullet);
+            }
+
+            if (id == Global.TileID_Iron || id == Global.TileID_Wall) {
+                tempLst.Add(bullet);
+            }
+        }
+    }
+
+    public Vector2Int min;
+    public Vector2Int max;
+
+    public bool IsOutOfBound(Vector2 fpos){
+        var pos = LevelManager.Pos2TilePos(fpos);
+        if (pos.x < min.x || pos.x > max.x
+                          || pos.y < min.y || pos.y > max.y
+        ) {
+            return true;
+        }
+
+        return false;
     }
 
     public bool IsCollided(Vector2 posA, float rA, Vector2 sizeA, Vector2 posB, float rB, Vector2 sizeB){
@@ -162,23 +252,25 @@ public class GameManager : BaseManager<GameManager> {
             player2BornPoint = heroBornPoss[1];
         }
 
+
+        //create palyers
+        myPlayer = CreatePlayer(playerBornPoint, 0);
+        myPlayer.name = "PlayerTank";
         //create camps
         var pos = (campPoss[0] + Vector2.one);
         camp = GameObject.Instantiate(CampPrefab, pos, Quaternion.identity, transParentItem.parent)
             .GetComponent<Camp>();
         camp.pos = pos;
         camp.size = Vector2.one;
-        //create palyers
-        myPlayer = CreatePlayer(playerBornPoint, 0);
-        myPlayer.name = "PlayerTank";
     }
 
 
     public override void DoUpdate(float deltaTime){
         //update player dir
         if (myPlayer != null) {
-            var v = main.inputMgr.vertical;
-            var h = main.inputMgr.horizontal;
+            var input = main.inputMgr;
+            var v = input.vertical;
+            var h = input.horizontal;
             var absh = Mathf.Abs(h);
             var absv = Mathf.Abs(v);
             if (absh < 0.01f && absv < 0.01f) {
@@ -188,7 +280,12 @@ public class GameManager : BaseManager<GameManager> {
                 myPlayer.dir = absh > absv
                     ? (h < 0 ? EDir.Left : EDir.Right)
                     : (v < 0 ? EDir.Down : EDir.Up);
-                myPlayer.moveSpd =  myPlayer.maxMoveSpd;
+                myPlayer.moveSpd = myPlayer.maxMoveSpd;
+            }
+
+            var isFire = input.firePressed || input.fireHeld;
+            if (isFire) {
+                myPlayer.Fire();
             }
         }
 
