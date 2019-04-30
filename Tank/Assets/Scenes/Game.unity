@@ -267,6 +267,10 @@ MonoBehaviour:
   bulletPrefabs: []
   itemPrefabs: []
   CampPrefab: {fileID: 0}
+  BornPrefab: {fileID: 0}
+  DiedPrefab: {fileID: 0}
+  TankBornOffset: {x: 1, y: 1}
+  TankBornDelay: 1.5
   maxEnemyCount: 6
   initEnemyCount: 20
   remainEnemyCount: 20
@@ -317,6 +321,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 89a813d99f03443fa74219660724f854, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  born: {fileID: 0}
+  died: {fileID: 8300000, guid: 083e6c0c165d0406fbec52b55dd71376, type: 3}
+  hitTank: {fileID: 8300000, guid: f015d85ccd1b64f528c3f27d77105446, type: 3}
+  hitIron: {fileID: 8300000, guid: 360b20e7144214aea883b65898121f17, type: 3}
+  addItem: {fileID: 8300000, guid: 43f03d2c788ea4425b9966b749df33ea, type: 3}
+  bgMusic: {fileID: 0}
+  startMusic: {fileID: 8300000, guid: e8a86054a35b34073a8d776ffcdedfe4, type: 3}
+  Source: {fileID: 0}
 --- !u!4 &142961767
 Transform:
   m_ObjectHideFlags: 0
@@ -381,6 +393,10 @@ MonoBehaviour:
   bulletPrefabs: []
   itemPrefabs: []
   CampPrefab: {fileID: 0}
+  BornPrefab: {fileID: 0}
+  DiedPrefab: {fileID: 0}
+  TankBornOffset: {x: 1, y: 1}
+  TankBornDelay: 1.5
   maxEnemyCount: 6
   initEnemyCount: 20
   remainEnemyCount: 20
@@ -2144,6 +2160,10 @@ MonoBehaviour:
   bulletPrefabs: []
   itemPrefabs: []
   CampPrefab: {fileID: 0}
+  BornPrefab: {fileID: 0}
+  DiedPrefab: {fileID: 0}
+  TankBornOffset: {x: 1, y: 1}
+  TankBornDelay: 1.5
   maxEnemyCount: 6
   initEnemyCount: 20
   remainEnemyCount: 20
@@ -5894,6 +5914,10 @@ MonoBehaviour:
   bulletPrefabs: []
   itemPrefabs: []
   CampPrefab: {fileID: 0}
+  BornPrefab: {fileID: 0}
+  DiedPrefab: {fileID: 0}
+  TankBornOffset: {x: 1, y: 1}
+  TankBornDelay: 1.5
   maxEnemyCount: 6
   initEnemyCount: 20
   remainEnemyCount: 20
@@ -6028,15 +6052,6 @@ Tilemap:
       m_ObjectToInstantiate: {fileID: 0}
       m_TileFlags: 1
       m_ColliderType: 1
-  - first: {x: 1, y: -11, z: 0}
-    second:
-      m_TileIndex: 2
-      m_TileSpriteIndex: 2
-      m_TileMatrixIndex: 0
-      m_TileColorIndex: 0
-      m_ObjectToInstantiate: {fileID: 0}
-      m_TileFlags: 1
-      m_ColliderType: 1
   - first: {x: -13, y: 12, z: 0}
     second:
       m_TileIndex: 2
@@ -6070,17 +6085,17 @@ Tilemap:
     m_Data: {fileID: 11400000, guid: ad9636df93a374961ab99879e157b585, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: fb6fc252b9ec9492487a7f962082b88b, type: 2}
-  - m_RefCount: 4
+  - m_RefCount: 3
     m_Data: {fileID: 11400000, guid: 1fa0c45d42ecc42f5ae4f1717f20e37d, type: 2}
   m_TileSpriteArray:
   - m_RefCount: 2
     m_Data: {fileID: 21300000, guid: 66b3faf41185c499289ba68af3a8b51f, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: 21300000, guid: bbf2bd9cbaea24f53983cc5ebbab75a0, type: 3}
-  - m_RefCount: 4
+  - m_RefCount: 3
     m_Data: {fileID: 21300000, guid: 4e78557acde58443d95644c3c2507337, type: 3}
   m_TileMatrixArray:
-  - m_RefCount: 7
+  - m_RefCount: 6
     m_Data:
       e00: 1
       e01: 0
@@ -6099,7 +6114,7 @@ Tilemap:
       e32: 0
       e33: 1
   m_TileColorArray:
-  - m_RefCount: 7
+  - m_RefCount: 6
     m_Data: {r: 1, g: 1, b: 1, a: 1}
   m_AnimationFrameRate: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}

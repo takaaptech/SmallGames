@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEditor;
+using System.Collections;
 
 [System.Serializable]
 public class GameManager : BaseManager<GameManager> {
@@ -36,19 +37,46 @@ public class GameManager : BaseManager<GameManager> {
     public List<GameObject> bulletPrefabs = new List<GameObject>();
     public List<GameObject> itemPrefabs = new List<GameObject>();
     public GameObject CampPrefab;
+    public GameObject BornPrefab;
+    public GameObject DiedPrefab;
 
-
-    public Tank CreateEnemy(Vector2Int pos, int type){
-        var unit = CreateUnit(pos, tankPrefabs, type, Vector2.one, transParentEnemy, EDir.Down, allEnmey);
-        unit.camp =Global. EnemyCamp;
-        return unit;
+    public void CreateEnemy(Vector2Int pos, int type){
+        StartCoroutine(YieldCreateEnemy(pos, type));
     }
 
-    public Tank CreatePlayer(Vector2Int pos, int type){
-        var unit = CreateUnit(pos, tankPrefabs, type, Vector2.one, transParentPlayer, EDir.Up, allPlayer);
+    public void CreatePlayer(Vector2Int pos, int type){
+        StartCoroutine(YiledCreatePlayer(pos, type));
+    }
+
+    public Vector2 TankBornOffset = Vector2.one;
+    public float TankBornDelay = 1f;
+
+    public IEnumerator YieldCreateEnemy(Vector2Int pos, int type){
+        ShowBornEffect(pos + TankBornOffset);
+        yield return new WaitForSeconds(TankBornDelay);
+        var unit = CreateUnit(pos, tankPrefabs, type, TankBornOffset, transParentEnemy, EDir.Down, allEnmey);
+        unit.camp = Global.EnemyCamp;
+    }
+
+    public IEnumerator YiledCreatePlayer(Vector2Int pos, int type){
+        ShowBornEffect(pos + TankBornOffset);
+        AudioManager.PlayClipBorn();
+        yield return new WaitForSeconds(TankBornDelay);
+        var unit = CreateUnit(pos, tankPrefabs, type, TankBornOffset, transParentPlayer, EDir.Up, allPlayer);
         unit.camp = Global.PlayerCamp;
-        return unit;
+
+        myPlayer = unit;
+        myPlayer.name = "PlayerTank";
     }
+
+    public void ShowBornEffect(Vector2 pos){
+        GameObject.Instantiate(BornPrefab, transform.position + new Vector3(pos.x, pos.y), Quaternion.identity);
+    }
+
+    public void ShowDiedEffect(Vector2 pos){
+        GameObject.Instantiate(DiedPrefab, transform.position + new Vector3(pos.x, pos.y), Quaternion.identity);
+    }
+
 
     public Bullet CreateBullet(Vector2 pos, EDir dir, Vector2 offset, int type){
         return CreateUnit(pos, bulletPrefabs, type, offset, transParentBullet, dir, allBullet);
@@ -86,6 +114,11 @@ public class GameManager : BaseManager<GameManager> {
 
     public void DestroyUnit<T>(T unit, List<T> lst) where T : Unit{
         if (lst.Remove(unit)) {
+            if (unit is Tank) {
+                ShowDiedEffect(unit.pos);
+                AudioManager.PlayClipDied();
+            }
+
             unit.DoDestroy();
         }
     }
@@ -110,6 +143,7 @@ public class GameManager : BaseManager<GameManager> {
             foreach (var tank in allPlayer) {
                 if (tank.camp != bulletCamp && IsCollided(bullet, tank)) {
                     tempLst.Add(bullet);
+                    AudioManager.PlayClipHitTank();
                     if (tank.TakeDamage(bullet)) {
                         tempLst.Add(tank);
                     }
@@ -119,6 +153,7 @@ public class GameManager : BaseManager<GameManager> {
             foreach (var tank in allEnmey) {
                 if (tank.camp != bulletCamp && IsCollided(bullet, tank)) {
                     tempLst.Add(bullet);
+                    AudioManager.PlayClipHitTank();
                     if (tank.TakeDamage(bullet)) {
                         tempLst.Add(tank);
                     }
@@ -159,11 +194,13 @@ public class GameManager : BaseManager<GameManager> {
         if (id != 0) {
             //collide bullet with world
             if (id == Global.TileID_Brick) {
+                if (bullet.camp == Global.PlayerCamp) { AudioManager.PlayClipHitBrick();}
                 LevelManager.Instance.ReplaceTile(pos, id, 0);
                 tempLst.Add(bullet);
             }
 
             if (id == Global.TileID_Iron || id == Global.TileID_Wall) {
+                if (id == Global.TileID_Iron && bullet.camp == Global.PlayerCamp) { AudioManager.PlayClipHitIron();}
                 tempLst.Add(bullet);
             }
         }
@@ -250,10 +287,9 @@ public class GameManager : BaseManager<GameManager> {
             player2BornPoint = heroBornPoss[1];
         }
 
-
+        AudioManager.PlayMusicStart();
         //create palyers
-        myPlayer = CreatePlayer(playerBornPoint, 0);
-        myPlayer.name = "PlayerTank";
+        CreatePlayer(playerBornPoint, 0);
         //create camps
         var pos = (campPoss[0] + Vector2.one);
         camp = GameObject.Instantiate(CampPrefab, pos, Quaternion.identity, transParentItem.parent)

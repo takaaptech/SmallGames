@@ -71,8 +71,16 @@ MonoBehaviour:
   itemPrefabs: []
   CampPrefab: {fileID: 4292889109681698490, guid: 6bc4b9cc6e0ac4e1fa8ae4a3c085ce77,
     type: 3}
+  BornPrefab: {fileID: 2433665004566486538, guid: f9124a9f4000f49c0918ae0666d6f979,
+    type: 3}
+  DiedPrefab: {fileID: 8451803282559610881, guid: f9a976efc357c459a9b323ba90eb2fc3,
+    type: 3}
+  TankBornOffset: {x: 1, y: 1}
+  TankBornDelay: 1
   maxEnemyCount: 6
   initEnemyCount: 20
   remainEnemyCount: 20
+  min: {x: 0, y: 0}
+  max: {x: 0, y: 0}
   bornEnemyInterval: 3
   bornTimer: 0

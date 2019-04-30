@@ -3,6 +3,26 @@ using UnityEngine;
 [System.Serializable]
 public class AudioManager : BaseManager<AudioManager> {
 
+    public static void PlayClipBorn(){Instance.PlayClip(Instance.born);}
+    public static void PlayClipDied(){ Instance.PlayClip(Instance.died);}
+    public static void PlayClipHitTank(){ Instance.PlayClip(Instance.hitTank);}
+    public static void PlayClipHitIron(){Instance.PlayClip(Instance.hitIron); }
+    public static void PlayClipHitBrick(){Instance.PlayClip(Instance.hitBrick); }
+    public static void PlayMusicBG(){ Instance.PlayClip(Instance.bgMusic);}
+    public static void PlayMusicStart(){ Instance.PlayClip(Instance.startMusic);}
 
-    public void PlayClip(AudioClip clip){ }
+    public AudioClip born;
+    public AudioClip died;
+    public AudioClip hitTank;
+    public AudioClip hitIron;
+    public AudioClip hitBrick;
+    public AudioClip addItem;
+    public AudioClip bgMusic;
+    public AudioClip startMusic;
+    public AudioSource Source;
+    public void PlayClip(AudioClip clip){
+        if (clip != null) {
+            Source.PlayOneShot(clip);
+        }
+    }
 }
