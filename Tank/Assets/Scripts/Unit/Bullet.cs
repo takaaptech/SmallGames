@@ -5,7 +5,8 @@ using UnityEngine;
 
 public class Bullet : Unit {
     public Tank owner;
-
+    public bool canDestoryIron = false;
+    public bool canDestoryGrass = false;
     public virtual void DoUpdate(float deltaTime){
         //update position
         Vector2 dirVec =CollisionHelper. GetDirVec(dir);

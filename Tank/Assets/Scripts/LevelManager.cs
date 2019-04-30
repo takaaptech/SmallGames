@@ -63,9 +63,10 @@ public class LevelManager : BaseManager<LevelManager> {
         return null;
     }
 
-    public ushort Pos2TileID(Vector2Int pos, bool isCollider){
+    public ushort Pos2TileID(Vector2Int pos, bool isCollider ){
         for (int i = 0; i < gridInfo.tileMaps.Length; i++) {
             var tilemap = gridInfo.tileMaps[i];
+            if (tilemap.isTagMap) continue;
             if (isCollider && !tilemap.hasCollider) continue;
             var tile = tilemap.GetTileID(pos);
             if (tile != 0)
@@ -106,6 +107,10 @@ public class LevelManager : BaseManager<LevelManager> {
                 if (tileMap.name == TILE_MAP_NAME_BORN_POS
                     || tileMap.name == TILE_MAP_NAME_GRASS) {
                     tileMapInfo.hasCollider = false;
+                }
+
+                if (tileMap.name == TILE_MAP_NAME_BORN_POS) {
+                    tileMapInfo.isTagMap = true;
                 }
             }
         }

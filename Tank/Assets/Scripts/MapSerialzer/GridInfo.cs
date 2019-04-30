@@ -9,6 +9,10 @@ public class TileInfos {
     public TileBase[] allTiles;
     public Vector3Int[] allPos;
     public bool hasCollider = true;
+
+    /// <summary> 仅用于标记 </summary>
+    public bool isTagMap = false;
+
     public Tilemap tilemap;
 
     public TileBase GetTile(Vector2Int pos){

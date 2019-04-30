@@ -46,6 +46,7 @@ public partial class GameManager : BaseManager<GameManager> {
     public int MAX_LEVEL_COUNT = 2;
 
     [Header("Prefabs")] public List<GameObject> tankPrefabs = new List<GameObject>();
+    public List<GameObject> playerPrefabs = new List<GameObject>();
     public List<GameObject> bulletPrefabs = new List<GameObject>();
     public List<GameObject> itemPrefabs = new List<GameObject>();
     public GameObject CampPrefab;
@@ -120,7 +121,7 @@ public partial class GameManager : BaseManager<GameManager> {
 
         AudioManager.PlayMusicStart();
         //create players
-        CreatePlayer(playerBornPoint, 0);
+        CreatePlayer(playerBornPoint, lastLevelPlayerTankType);
         //create camps
         var pos = (campPoss[0] + Vector2.one);
         camp = GameObject.Instantiate(CampPrefab, transform.position + (Vector3) pos, Quaternion.identity,
@@ -131,6 +132,7 @@ public partial class GameManager : BaseManager<GameManager> {
         camp.radius = camp.size.magnitude;
     }
 
+    public int lastLevelPlayerTankType = 0;
 
     public override void DoUpdate(float deltaTime){
         if (IsGameOver) return;
@@ -246,7 +248,8 @@ public partial class GameManager : BaseManager<GameManager> {
         }
 
         // tank  and item
-        foreach (var tank in allPlayer) {
+        var players = allPlayer.ToArray(); //item may modified the allPlayer list so copy it
+        foreach (var tank in players) {
             foreach (var item in allItem) {
                 if (CollisionHelper.CheckCollision(tank, item)) {
                     item.TriggelEffect(tank);
@@ -254,21 +257,25 @@ public partial class GameManager : BaseManager<GameManager> {
                 }
             }
         }
+
         foreach (var bullet in allBullet) {
             if (bullet.health <= 0) {
                 tempLst.Add(bullet);
             }
         }
+
         foreach (var bullet in allEnmey) {
             if (bullet.health <= 0) {
                 tempLst.Add(bullet);
             }
         }
+
         foreach (var bullet in allPlayer) {
             if (bullet.health <= 0) {
                 tempLst.Add(bullet);
             }
         }
+
         // destroy unit
         foreach (var unit in tempLst) {
             GameManager.Instance.DestroyUnit(unit as Bullet, GameManager.Instance.allBullet);
@@ -283,6 +290,7 @@ public partial class GameManager : BaseManager<GameManager> {
         }
 
         if (allEnmey.Count == 0 && RemainEnemyCount <= 0) {
+            lastLevelPlayerTankType = myPlayer.detailType;
             GameWin();
         }
 
@@ -294,25 +302,35 @@ public partial class GameManager : BaseManager<GameManager> {
     }
 
 
-    private void CheckBulletWithMap(Vector2Int iPos, HashSet<Unit> tempLst, Unit bullet){
-        var id = LevelManager.Instance.Pos2TileID(iPos, true);
-        if (id != 0) {
+    private void CheckBulletWithMap(Vector2Int iPos, HashSet<Unit> tempLst, Bullet bullet){
+        var id = LevelManager.Instance.Pos2TileID(iPos,false);
+        if (id != 0 && bullet.health > 0) {
             //collide bullet with world
             if (id == Global.TileID_Brick) {
-                if (bullet.camp == Global.PlayerCamp) {
-                    AudioManager.PlayClipHitBrick();
-                }
-
+                if (bullet.camp == Global.PlayerCamp) {AudioManager.PlayClipHitBrick();}
                 LevelManager.Instance.ReplaceTile(iPos, id, 0);
-                bullet.health = 0;
-            }
-
-            if (id == Global.TileID_Iron || id == Global.TileID_Wall) {
-                if (id == Global.TileID_Iron && bullet.camp == Global.PlayerCamp) {
-                    AudioManager.PlayClipHitIron();
-                }
-
                 bullet.health--;
+            }
+            else if (id == Global.TileID_Iron) {
+                if (!bullet.canDestoryIron) {
+                    if (bullet.camp == Global.PlayerCamp) {AudioManager.PlayClipHitIron();}
+                    bullet.health = 0;
+                }
+                else {
+                    if (bullet.camp == Global.PlayerCamp) {AudioManager.PlayClipDestroyIron();}
+                    bullet.health = Mathf.Max(bullet.health - 2, 0);
+                    LevelManager.Instance.ReplaceTile(iPos, id, 0);
+                }
+            }
+            else if (id == Global.TileID_Grass) {
+                if (bullet.canDestoryGrass) {
+                    if (bullet.camp == Global.PlayerCamp) {AudioManager.PlayClipDestroyGrass();}
+                    bullet.health -= 0;
+                    LevelManager.Instance.ReplaceTile(iPos, id, 0);
+                }
+            }
+            else if (id == Global.TileID_Wall) {
+                bullet.health = 0;
             }
         }
     }
@@ -368,11 +386,24 @@ public partial class GameManager : BaseManager<GameManager> {
 
     #region Create& Destroy
 
+    public bool Upgrade(Tank player, int upLevel = 1){
+        var level = player.detailType + 1;
+        if (level >= playerPrefabs.Count) {
+            return false;
+        }
+
+        // TODO 最好不要这样做 而是以直接修改属性的方式 
+        var tank = DirectCreatePlayer(player.pos - TankBornOffset, level);
+        allPlayer.Remove(player);
+        GameObject.Destroy(player.gameObject);
+        return true;
+    }
+
     public void CreateEnemy(Vector2Int pos, int type){
         StartCoroutine(YieldCreateEnemy(pos, type));
     }
 
-    public void CreatePlayer(Vector2Int pos, int type){
+    public void CreatePlayer(Vector2 pos, int type){
         StartCoroutine(YiledCreatePlayer(pos, type));
     }
 
@@ -384,16 +415,21 @@ public partial class GameManager : BaseManager<GameManager> {
         RemainEnemyCount--;
     }
 
-    public IEnumerator YiledCreatePlayer(Vector2Int pos, int type){
+    public IEnumerator YiledCreatePlayer(Vector2 pos, int type){
         ShowBornEffect(pos + TankBornOffset);
         AudioManager.PlayClipBorn();
         yield return new WaitForSeconds(TankBornDelay);
-        var unit = CreateUnit(pos, tankPrefabs, type, TankBornOffset, transParentPlayer, EDir.Up, allPlayer);
+        DirectCreatePlayer(pos, type);
+    }
+
+    private Tank DirectCreatePlayer(Vector2 pos, int type){
+        var unit = CreateUnit(pos, playerPrefabs, type, TankBornOffset, transParentPlayer, EDir.Up, allPlayer);
         unit.camp = Global.PlayerCamp;
         unit.brain.enabled = false;
         myPlayer = unit;
         myPlayer.name = "PlayerTank";
         RemainPlayerLife--;
+        return unit;
     }
 
     public void ShowBornEffect(Vector2 pos){
@@ -467,7 +503,8 @@ public partial class GameManager : BaseManager<GameManager> {
                         OnScoreChanged(Score);
                     }
 
-                    if (tank.detailType >= Global.ItemTankType && itemPrefabs.Count>0) {
+                    if ( //tank.detailType >= Global.ItemTankType &&
+                        itemPrefabs.Count > 0) {
                         var x = Random.Range(min.x + 1.0f, max.x - 3.0f);
                         var y = Random.Range(min.y + 1.0f, max.y - 3.0f);
                         CreateItem(new Vector2(x, y), Random.Range(0, itemPrefabs.Count));
