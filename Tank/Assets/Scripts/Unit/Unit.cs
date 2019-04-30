@@ -118,7 +118,7 @@ public class Unit : MonoBehaviour {
 
         var diffPos = maxMoveDist * (Vector2) dirVec;
         pos = pos + diffPos;
-        if (this.name.Contains("Player")) {
+        if (camp == Global.PlayerCamp) {
             if (isChangedDir) {
                 var idir = (int) (dir);
                 var isUD = idir % 2 == 0;

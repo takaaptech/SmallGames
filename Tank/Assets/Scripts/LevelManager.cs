@@ -15,18 +15,12 @@ public class LevelManager : BaseManager<LevelManager> {
     private static TileBase[] id2Tiles = new TileBase[65536]; //64KB
     private static Dictionary<TileBase, ushort> tile2ID = new Dictionary<TileBase, ushort>();
 
-    public int curLevel = 2;
-
 
     private static string TILE_MAP_NAME_BORN_POS = "BornPos";
     private static string TILE_MAP_NAME_GRASS = "Grass";
 
     public static string GetMapPathFull(int level){
         return Path.Combine(Application.dataPath, "Resources/Maps/" + level + ".bytes");
-    }
-
-    public void OnSceneLoaded(){
-        LoadGame();
     }
 
 
@@ -36,9 +30,9 @@ public class LevelManager : BaseManager<LevelManager> {
 
     public GridInfo gridInfo;
 
-    public void LoadGame(){
-        gridInfo = LoadLevel(curLevel);
-        main.gameMgr.StartGame();
+    public void LoadGame(int level){
+        gridInfo = LoadLevel(level);
+        main.gameMgr.StartGame(level);
     }
 
     public static Vector2Int Pos2TilePos(Vector2 pos){

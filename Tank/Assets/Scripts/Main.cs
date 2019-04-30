@@ -30,6 +30,7 @@ public class Main : MonoBehaviour {
     public InputManager inputMgr;
     public LevelManager levelMgr;
     public GameManager gameMgr;
+    public UIManager uiMgr;
     public static Main Instance { get; private set; }
     private List<BaseMgr> allMgrs = new List<BaseMgr>();
     private string curLevelName = "";
@@ -50,11 +51,14 @@ public class Main : MonoBehaviour {
         inputMgr = InputManager.Instance;
         levelMgr = LevelManager.Instance;
         gameMgr = GameManager.Instance;
+        uiMgr = UIManager.Instance;
         //register mgrs 
         allMgrs.Add(audioMgr);
         allMgrs.Add(inputMgr);
         allMgrs.Add(levelMgr);
         allMgrs.Add(gameMgr);
+        allMgrs.Add(uiMgr);
+        
         //SceneManager.sceneLoaded += OnSceneLoaded;
         foreach (var mgr in allMgrs) {
             mgr.Init(this);
@@ -67,7 +71,9 @@ public class Main : MonoBehaviour {
         foreach (var mgr in allMgrs) {
             mgr.DoStart();
         }
-        levelMgr.OnSceneLoaded();
+        gameMgr.RemainPlayerLife = 3;
+        gameMgr.Score = 0;
+        levelMgr.LoadGame(1);
     }
 
 
