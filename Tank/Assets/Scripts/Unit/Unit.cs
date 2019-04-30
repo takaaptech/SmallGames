@@ -9,8 +9,21 @@ public class Unit : MonoBehaviour {
     public int health = 100;
     public float moveSpd = 2;
     public float maxMoveSpd = 2;
-    public EDir dir;
+    public EDir _dir;
+    public EDir dir {
+        get {
+            return _dir;
+            
+        }
+        set {
+            if (_dir != value) {
+                isChangedDir = true;
+            }
+            _dir = value;
+        }
+    }
 
+    private bool isChangedDir = false;
     //for collision
     public Vector2 pos; //center
     public Vector2 size; //for aabb
@@ -102,16 +115,46 @@ public class Unit : MonoBehaviour {
         var dist = GetMaxMoveDist(headPos, fTargetHead, maxMoveDist, borderDir);
         var dist2 = GetMaxMoveDist(headPos, fPreviewHead, maxMoveDist, borderDir);
         maxMoveDist = Mathf.Min(maxMoveDist, dist, dist2);
+
         var diffPos = maxMoveDist * (Vector2) dirVec;
         pos = pos + diffPos;
-        transform.localPosition = pos;
-    }
+        if (this.name.Contains("Player")) {
+            if (isChangedDir) {
+                var idir = (int) (dir);
+                var isUD = idir % 2 == 0;
+                if (isUD) {
+                    pos.x = ClampToNearInt(pos.x);
+                    
+                }
+                else {
+                    pos.y = ClampToNearInt(pos.y);
+                }
+            }
+        }
 
+        transform.localPosition = pos;
+        isChangedDir = false;
+    }
+    /// <summary>
+    /// 如果val值接近整数  则直接变为整数 方便玩家操作
+    /// </summary>
+    public float ClampToNearInt(float val){
+        var floorVal = Mathf.Floor(val);
+        var diff2Floor = val -floorVal ;
+        if (diff2Floor < minMovesDist) {
+            return  floorVal;
+        }
+        else if(diff2Floor > (1-minMovesDist)) {
+            return floorVal + 1;
+        }
+        return val;
+    }
+    private const float minMovesDist = 0.4f;
     bool IsCollider(Vector2 pos){
         var iPos = new Vector2Int(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y));
         var id = LevelManager.Instance.Pos2TileID(iPos, true);
 
-        if (this.name.Contains("Player")) {
+        if (camp == Global.PlayerCamp) {
             DrawDebugView(iPos, id != 0);
         }
 

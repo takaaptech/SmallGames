@@ -7,4 +7,8 @@ public static class Global {
     public const int TileID_BornPosEnemy = 6;
     public const int TileID_BornPosHero = 7;
     public static int CurGameLevel;
+    
+    
+    public const int EnemyCamp = 1;
+    public const int PlayerCamp = 2;
 }

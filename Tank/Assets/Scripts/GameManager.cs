@@ -37,18 +37,16 @@ public class GameManager : BaseManager<GameManager> {
     public List<GameObject> itemPrefabs = new List<GameObject>();
     public GameObject CampPrefab;
 
-    public const int EnemyCamp = 1;
-    public const int PlayerCamp = 2;
 
     public Tank CreateEnemy(Vector2Int pos, int type){
         var unit = CreateUnit(pos, tankPrefabs, type, Vector2.one, transParentEnemy, EDir.Down, allEnmey);
-        unit.camp = EnemyCamp;
+        unit.camp =Global. EnemyCamp;
         return unit;
     }
 
     public Tank CreatePlayer(Vector2Int pos, int type){
         var unit = CreateUnit(pos, tankPrefabs, type, Vector2.one, transParentPlayer, EDir.Up, allPlayer);
-        unit.camp = PlayerCamp;
+        unit.camp = Global.PlayerCamp;
         return unit;
     }
 
