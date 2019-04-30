@@ -9,6 +9,7 @@ public static class Global {
     public static int CurGameLevel;
     
     
+    public const int ItemTankType = 4;
     public const int EnemyCamp = 1;
     public const int PlayerCamp = 2;
 }

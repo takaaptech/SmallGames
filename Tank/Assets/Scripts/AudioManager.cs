@@ -10,6 +10,7 @@ public class AudioManager : BaseManager<AudioManager> {
     public static void PlayClipHitBrick(){Instance.PlayClip(Instance.hitBrick); }
     public static void PlayMusicBG(){ Instance.PlayClip(Instance.bgMusic);}
     public static void PlayMusicStart(){ Instance.PlayClip(Instance.startMusic);}
+    public static void PlayMusicGetItem(){ Instance.PlayClip(Instance.addItem);}
 
     public AudioClip born;
     public AudioClip died;

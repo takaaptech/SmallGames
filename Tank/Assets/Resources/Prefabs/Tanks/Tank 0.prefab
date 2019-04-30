@@ -76,31 +76,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   camp: 0
-  health: 0
+  health: 1
   moveSpd: 2
-  maxMoveSpd: 5
-  moveDir: {x: 0, y: 0}
+  MaxMoveSpd: 5
+  _dir: 0
   pos: {x: 0, y: 0}
   size: {x: 0, y: 0}
   radius: 0
-  effectProxy:
-    bornEffect:
-      prefab: {fileID: 2433665004566486538, guid: f9124a9f4000f49c0918ae0666d6f979,
-        type: 3}
-      offset: {x: 0, y: 0}
-      isNeedTrackInstaceGo: 0
-    destoryEffect:
-      prefab: {fileID: 364227420693640187, guid: 9ce9006a94bb14dd69bcda9fa342d992,
-        type: 3}
-      offset: {x: 0, y: 0}
-      isNeedTrackInstaceGo: 0
-    useEffect:
-      prefab: {fileID: 0}
-      offset: {x: 0, y: 0}
-      isNeedTrackInstaceGo: 0
-  atkCD: 0
-  damage: 0
-  bulletType: 0
+  skill:
+    owner: {fileID: 0}
+    CD: 0.2
+    prefabType: 0
+  brain:
+    owner: {fileID: 0}
+    updateInterval: 1
+    fireRate: 0.3
+    enabled: 1
 --- !u!1 &7207381075261074271
 GameObject:
   m_ObjectHideFlags: 0

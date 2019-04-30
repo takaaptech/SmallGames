@@ -8,13 +8,14 @@ public enum EDir {
     Left,
     Down,
     Right,
+    EnumCount
 }
+
 [Serializable]
 public class Effect {
     public GameObject prefab;
     public Vector2 offset;
-    [HideInInspector]
-    private GameObject prefabInstance;
+    [HideInInspector] private GameObject prefabInstance;
     public bool isNeedTrackInstaceGo = false;
 
     public void Play(Vector2 pos){
@@ -32,6 +33,7 @@ public class Effect {
         }
     }
 }
+
 [Serializable]
 public class EffectProxy {
     public Effect bornEffect;
@@ -61,25 +63,6 @@ public class EffectProxy {
     }
 }
 
-public class AIProxy {
-    public Unit owner;
-    private float timer;
-    public float updateInterval = 3;
-
-    public void DoUpdate(float deltaTime){
-        timer += deltaTime;
-        if (timer < updateInterval) {
-            return;
-        }
-
-        timer = 0;
-        Vector2Int dir = Vector2Int.zero;
-        var num = Random.Range(0, 3);
-        owner.dir = (EDir)num;
-    }
-}
-
-
 
 public class Player : Tank { }
 
@@ -91,4 +74,15 @@ public class Enemy : Tank {
 public class Item : Unit {
     public int Type;
     public float lifeTime;
+    public bool isEnable = true;
+
+    public void TriggelEffect(Tank unit){
+        if (!isEnable) return;
+        isEnable = false;
+        AudioManager.PlayMusicGetItem();
+        OnTriggelEffect(unit);
+    }
+
+    protected virtual void OnTriggelEffect(Tank unit){
+    }
 }

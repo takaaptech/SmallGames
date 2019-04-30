@@ -124,24 +124,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   camp: 0
-  health: 0
-  moveSpd: 10
-  maxMoveSpd: 10
-  dir: 0
+  health: 1
+  moveSpd: 15
+  MaxMoveSpd: 15
+  _dir: 0
   pos: {x: 0, y: 0}
   size: {x: 0, y: 0}
   radius: 0.2
-  effectProxy:
-    bornEffect:
-      prefab: {fileID: 0}
-      offset: {x: 0, y: 0}
-      isNeedTrackInstaceGo: 0
-    destoryEffect:
-      prefab: {fileID: 0}
-      offset: {x: 0, y: 0}
-      isNeedTrackInstaceGo: 0
-    useEffect:
-      prefab: {fileID: 0}
-      offset: {x: 0, y: 0}
-      isNeedTrackInstaceGo: 0
   owner: {fileID: 0}

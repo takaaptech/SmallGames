@@ -8,7 +8,7 @@ public class Bullet : Unit {
 
     public virtual void DoUpdate(float deltaTime){
         //update position
-        Vector2 dirVec = GetDirVec(dir);
+        Vector2 dirVec =CollisionHelper. GetDirVec(dir);
         var offset = (moveSpd * deltaTime) * dirVec;
         pos += offset;
         transform.localPosition = pos;

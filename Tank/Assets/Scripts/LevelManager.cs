@@ -35,20 +35,15 @@ public class LevelManager : BaseManager<LevelManager> {
         main.gameMgr.StartGame(level);
     }
 
-    public static Vector2Int Pos2TilePos(Vector2 pos){
-        return new Vector2Int(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.y));
-    }
-
     public TileBase Pos2Tile(Vector2 pos, bool isCollider){
-        return Pos2Tile(Pos2TilePos(pos), isCollider);
+        return Pos2Tile(pos.Floor(), isCollider);
     }
 
     public ushort Pos2TileID(Vector2 pos, bool isCollider){
-        return Pos2TileID(Pos2TilePos(pos), isCollider);
+        return Pos2TileID(pos.Floor(), isCollider);
     }
 
-    public void ReplaceTile(Vector2 fpos, ushort srcID, ushort targetID){
-        var pos = Pos2TilePos(fpos);
+    public void ReplaceTile(Vector2Int pos, ushort srcID, ushort targetID){
         foreach (var tilemap in gridInfo.tileMaps) {
             var tile = tilemap.GetTileID(pos);
             if (tile == srcID) {
