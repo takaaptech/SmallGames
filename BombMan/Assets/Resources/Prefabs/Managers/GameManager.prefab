@@ -50,9 +50,8 @@ MonoBehaviour:
   bornEnemyInterval: 3
   MAX_ENEMY_COUNT: 6
   initEnemyCount: 20
+  levelMgr: {fileID: 0}
   _RemainEnemyCount: 0
-  _RemainPlayerLife: 0
-  Score: 0
   CurLevel: 0
   IsGameOver: 0
   MAX_LEVEL_COUNT: 2
@@ -69,8 +68,8 @@ MonoBehaviour:
   - {fileID: 7207381074908001021, guid: 69c835cbcaaa046cebed60a426abd97f, type: 3}
   bulletPrefabs:
   - {fileID: 8545725408842799341, guid: b864db0a424c44bc9958779735772c7e, type: 3}
-  - {fileID: 4698795879962731491, guid: 91e8488ce6aa64e0b81ced589bc5a3dd, type: 3}
-  - {fileID: 4698795879962731491, guid: c71022e98a6eb4f5183cff8357c13552, type: 3}
+  - {fileID: 8545725408842799341, guid: 099d776774e6e448084a573e2b2b60e0, type: 3}
+  - {fileID: 8545725408842799341, guid: 7bcc80ff48fe6400d894d21afcb8fa0a, type: 3}
   itemPrefabs:
   - {fileID: 8545725408842799341, guid: 66f84471f32a54fda9a1d0dc63fb37a0, type: 3}
   - {fileID: 8545725408842799341, guid: 0a539ee1c10f54a2a8efdfaa61ed34d5, type: 3}
@@ -83,15 +82,31 @@ MonoBehaviour:
     type: 3}
   allEnmey: []
   allPlayer: []
-  allBullet: []
+  allBomb: []
   allItem: []
   camp: {fileID: 7041209654323201290, guid: 6bc4b9cc6e0ac4e1fa8ae4a3c085ce77, type: 3}
   myPlayer: {fileID: 0}
+  player2: {fileID: 0}
   campBound:
     m_Position: {x: 0, y: 0, z: 0}
     m_Size: {x: 0, y: 0, z: 0}
   enemyBornPoints: []
-  playerBornPoint: {x: 0, y: 0}
-  player2BornPoint: {x: 0, y: 0}
   min: {x: 0, y: 0}
   max: {x: 0, y: 0}
+  allPlayerInfos:
+  - isMainPlayer: 0
+    bornPos: {x: 0, y: 0}
+    walker: {fileID: 0}
+    isLiveInLastLevel: 1
+    lastLevelTankType: 0
+    score: 0
+    remainPlayerLife: 0
+  - isMainPlayer: 0
+    bornPos: {x: 0, y: 0}
+    walker: {fileID: 0}
+    isLiveInLastLevel: 1
+    lastLevelTankType: 0
+    score: 0
+    remainPlayerLife: 0
+  campPos: {x: 0, y: 0}
+  HasCreatedCamp: 0

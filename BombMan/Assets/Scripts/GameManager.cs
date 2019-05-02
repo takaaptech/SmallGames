@@ -31,18 +31,7 @@ public partial class GameManager : BaseManager<GameManager> {
     public int initEnemyCount = 20;
     public LevelManager levelMgr;
 
-    [Header("GameStatus")] [SerializeField]
-    private int _RemainEnemyCount;
-
-    public int RemainEnemyCount {
-        get { return _RemainEnemyCount; }
-        set {
-            _RemainEnemyCount = value;
-            if (OnEnmeyCountChanged != null) OnEnmeyCountChanged(_RemainEnemyCount);
-        }
-    }
-
-    public int CurLevel = 0;
+    [Header("GameStatus")] public int CurLevel = 0;
     public bool IsGameOver = false;
     public int MAX_LEVEL_COUNT = 2;
 
@@ -113,9 +102,9 @@ public partial class GameManager : BaseManager<GameManager> {
         CurLevel = level;
         IsGameOver = false;
         bornTimer = 0;
-        RemainEnemyCount = initEnemyCount;
         camp = null;
         HasCreatedCamp = false;
+        gameTimer = 0;
         //read map info
         var tileInfo = main.levelMgr.GetMapInfo(Global.TileMapName_BornPos);
         var campPoss = tileInfo.GetAllTiles(LevelManager.ID2Tile(Global.TileID_Camp));
@@ -149,16 +138,18 @@ public partial class GameManager : BaseManager<GameManager> {
         //create enemy 
         initEnemyCount = enemyBornPoints.Count;
         for (int i = 0; i < initEnemyCount; i++) {
-            var idx = Random.Range(0, enemyBornPoints.Count);
-            var bornPoint = enemyBornPoints[idx];
+            var bornPoint = enemyBornPoints[i];
             CreateEnemy(bornPoint, 0);
         }
 
         AudioManager.PlayMusicStart();
         campPos = campPoss[0];
+        isInited = true;
     }
 
-
+    private bool isInited = false;
+    private float EndCheckMinTime = 5;
+    private float gameTimer;
     public PlayerInfo GetPlayerFormTank(Walker walker){
         if (walker == null) return null;
         foreach (var info in allPlayerInfos) {
@@ -201,7 +192,8 @@ public partial class GameManager : BaseManager<GameManager> {
     }
 
     public override void DoUpdate(float deltaTime){
-        if (IsGameOver) return;
+        if (!isInited || IsGameOver) return;
+        gameTimer += deltaTime;
         //update player dir from input command
         var input = main.inputMgr;
         UpdatePlayer(allPlayerInfos[0], input.inputs[0]);
@@ -253,15 +245,17 @@ public partial class GameManager : BaseManager<GameManager> {
                 ApplyExplodeCross(bomb);
             }
         }
+
         //连炸效果
         while (pendingExplodeBombs.Count > 0) {
             var bomb = pendingExplodeBombs.Dequeue();
             ApplyExplodeCross(bomb);
         }
+
         explodedPoss.Clear();
         explodeEffectPos.Clear();
 
-        
+
         foreach (var unit in allEnmey) {
             if (unit.health <= 0) {
                 tempLst.Add(unit);
@@ -297,8 +291,9 @@ public partial class GameManager : BaseManager<GameManager> {
             }
         }
 
-        if (allEnmey.Count == 0 && RemainEnemyCount <= 0) {
+        if (allEnmey.Count == 0 && gameTimer > EndCheckMinTime) {
             if (!HasCreatedCamp) {
+                HasCreatedCamp = true;
                 CreateCamp();
             }
         }
@@ -375,9 +370,11 @@ public partial class GameManager : BaseManager<GameManager> {
                 }
             }
         }
+
         if (explodeEffectPos.Add(iPos)) {
             ShowDiedEffect(iPos + Global.UnitSizeVec);
         }
+
         return false;
     }
 
@@ -405,6 +402,7 @@ public partial class GameManager : BaseManager<GameManager> {
     #region GameStatus
 
     private void GameFalied(){
+        isInited = false;
         IsGameOver = true;
         ShowMessage("Game Falied!!");
         Clear();
@@ -497,7 +495,6 @@ public partial class GameManager : BaseManager<GameManager> {
         yield return new WaitForSeconds(TankBornDelay);
         var unit = CreateUnit(pos, tankPrefabs, type, Global.UnitSizeVec, transParentEnemy, EDir.Down, allEnmey);
         unit.camp = Global.EnemyCamp;
-        RemainEnemyCount--;
     }
 
     public IEnumerator YiledCreatePlayer(Vector2 pos, int type, PlayerInfo playerInfo, bool isConsumeLife){
@@ -538,7 +535,8 @@ public partial class GameManager : BaseManager<GameManager> {
     }
 
     public void CreateItem(Vector2 pos, int type){
-        CreateUnit(pos, itemPrefabs, type, Vector2.one, transParentItem, EDir.Up, allItem);
+        Debug.LogError("CreateItem " + pos);
+        CreateUnit(pos, itemPrefabs, type, Global.UnitSizeVec, transParentItem, EDir.Up, allItem);
     }
 
 
@@ -592,6 +590,9 @@ public partial class GameManager : BaseManager<GameManager> {
                 if (tank.camp == Global.EnemyCamp) {
                     var info = GetPlayerFormTank(tank.killer);
                     info.score += (tank.detailType + 1) * 100;
+                    if (OnEnmeyCountChanged != null) {
+                        OnEnmeyCountChanged(allEnmey.Count);
+                    }
 
                     if (OnScoreChanged != null) {
                         OnScoreChanged(info);
@@ -599,9 +600,16 @@ public partial class GameManager : BaseManager<GameManager> {
 
                     if ( //tank.detailType >= Global.ItemTankType &&
                         itemPrefabs.Count > 0) {
-                        var x = Random.Range(min.x + 1.0f, max.x - 3.0f);
-                        var y = Random.Range(min.y + 1.0f, max.y - 3.0f);
-                        CreateItem(new Vector2(x, y), Random.Range(0, itemPrefabs.Count));
+                        var id = 1;
+                        Vector2Int pos = Vector2Int.up;
+                        while (id != 0) {
+                            var x = Random.Range(min.x + 1, max.x - 3);
+                            var y = Random.Range(min.y + 1, max.y - 3);
+                            pos = new Vector2Int(x, y);
+                            id = levelMgr.Pos2TileID(pos);
+                        }
+            
+                        CreateItem(pos , Random.Range(0, itemPrefabs.Count));
                     }
                 }
 

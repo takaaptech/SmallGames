@@ -87,7 +87,7 @@ MonoBehaviour:
   skill:
     owner: {fileID: 0}
     CD: 0.5
-    prefabType: 0
+    prefabType: 1
   brain:
     owner: {fileID: 0}
     updateInterval: 1

@@ -45,26 +45,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   camp: 0
+  detailType: 0
   health: 0
   moveSpd: 2
-  maxMoveSpd: 2
-  moveDir: {x: 0, y: 0}
+  MaxMoveSpd: 2
+  _dir: 0
   pos: {x: 0, y: 0}
   size: {x: 0, y: 0}
   radius: 0
-  effectProxy:
-    bornEffect:
-      prefab: {fileID: 0}
-      offset: {x: 0, y: 0}
-      isNeedTrackInstaceGo: 0
-    destoryEffect:
-      prefab: {fileID: 0}
-      offset: {x: 0, y: 0}
-      isNeedTrackInstaceGo: 0
-    useEffect:
-      prefab: {fileID: 0}
-      offset: {x: 0, y: 0}
-      isNeedTrackInstaceGo: 0
 --- !u!1 &8037794289396791068
 GameObject:
   m_ObjectHideFlags: 0
@@ -91,7 +79,7 @@ Transform:
   m_GameObject: {fileID: 8037794289396791068}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 4574307173080717508}
   m_RootOrder: 0
