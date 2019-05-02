@@ -579,7 +579,8 @@ public partial class GameManager : BaseManager<GameManager> {
                         OnScoreChanged(info);
                     }
 
-                    if ( //tank.detailType >= Global.ItemTankType &&
+                    if ( 
+                        tank.detailType >= Global.ItemTankType &&
                         itemPrefabs.Count > 0) {
                         var x = Random.Range(min.x + 1.0f, max.x - 3.0f);
                         var y = Random.Range(min.y + 1.0f, max.y - 3.0f);
