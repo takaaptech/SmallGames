@@ -29,6 +29,7 @@ public partial class GameManager : BaseManager<GameManager> {
     private float bornTimer;
     public int MAX_ENEMY_COUNT = 6;
     public int initEnemyCount = 20;
+    public LevelManager levelMgr;
 
     [Header("GameStatus")] [SerializeField]
     private int _RemainEnemyCount;
@@ -55,7 +56,7 @@ public partial class GameManager : BaseManager<GameManager> {
 
     [Header("References")] public List<Walker> allEnmey = new List<Walker>();
     public List<Walker> allPlayer = new List<Walker>();
-    public List<Bomber> allBullet = new List<Bomber>();
+    public List<Bomb> allBomb = new List<Bomb>();
     public List<Item> allItem = new List<Item>();
     public Camp camp;
     public Walker myPlayer;
@@ -76,7 +77,6 @@ public partial class GameManager : BaseManager<GameManager> {
     public Action<string> OnMessage;
 
     //const variables
-    public static Vector2 TankBornOffset = Vector2.one;
     public static float TankBornDelay = 1f;
 
 
@@ -85,6 +85,8 @@ public partial class GameManager : BaseManager<GameManager> {
 
     HashSet<Vector2Int> tempPoss = new HashSet<Vector2Int>();
     HashSet<Unit> tempLst = new HashSet<Unit>();
+    public Vector2Int campPos;
+    public bool HasCreatedCamp = false;
 
 
     #region LifeCycle
@@ -99,19 +101,21 @@ public partial class GameManager : BaseManager<GameManager> {
         transParentPlayer = FuncCreateTrans("Players");
         transParentEnemy = FuncCreateTrans("Enemies");
         transParentItem = FuncCreateTrans("Items");
-        transParentBullet = FuncCreateTrans("Bullets");
+        transParentBullet = FuncCreateTrans("Bomb");
     }
 
     /// <summary>
     /// 正式开始游戏
     /// </summary>
     public void StartGame(int level){
+        levelMgr = LevelManager.Instance;
         //reset variables
         CurLevel = level;
         IsGameOver = false;
         bornTimer = 0;
         RemainEnemyCount = initEnemyCount;
         camp = null;
+        HasCreatedCamp = false;
         //read map info
         var tileInfo = main.levelMgr.GetMapInfo(Global.TileMapName_BornPos);
         var campPoss = tileInfo.GetAllTiles(LevelManager.ID2Tile(Global.TileID_Camp));
@@ -142,15 +146,16 @@ public partial class GameManager : BaseManager<GameManager> {
             }
         }
 
+        //create enemy 
+        initEnemyCount = enemyBornPoints.Count;
+        for (int i = 0; i < initEnemyCount; i++) {
+            var idx = Random.Range(0, enemyBornPoints.Count);
+            var bornPoint = enemyBornPoints[idx];
+            CreateEnemy(bornPoint, 0);
+        }
+
         AudioManager.PlayMusicStart();
-        //create camps
-        var pos = (campPoss[0] + Vector2.one);
-        camp = GameObject.Instantiate(CampPrefab, transform.position + (Vector3) pos, Quaternion.identity,
-                transParentItem.parent)
-            .GetComponent<Camp>();
-        camp.pos = pos;
-        camp.size = Vector2.one;
-        camp.radius = camp.size.magnitude;
+        campPos = campPoss[0];
     }
 
 
@@ -201,18 +206,6 @@ public partial class GameManager : BaseManager<GameManager> {
         var input = main.inputMgr;
         UpdatePlayer(allPlayerInfos[0], input.inputs[0]);
         UpdatePlayer(allPlayerInfos[1], input.inputs[1]);
-        //born enemy
-        if (allEnmey.Count < MAX_ENEMY_COUNT && RemainEnemyCount > 0) {
-            bornTimer += deltaTime;
-            if (bornTimer > bornEnemyInterval && enemyBornPoints.Count > 0) {
-                bornTimer = 0;
-                //born enemy
-                var idx = Random.Range(0, enemyBornPoints.Count);
-                var bornPoint = enemyBornPoints[idx];
-                CreateEnemy(bornPoint, Random.Range(0, tankPrefabs.Count));
-            }
-        }
-
         //update all units
         foreach (var target in allEnmey) {
             target.DoUpdate(deltaTime);
@@ -222,7 +215,7 @@ public partial class GameManager : BaseManager<GameManager> {
             target.DoUpdate(deltaTime);
         }
 
-        foreach (var target in allBullet) {
+        foreach (var target in allBomb) {
             target.DoUpdate(deltaTime);
         }
 
@@ -234,86 +227,56 @@ public partial class GameManager : BaseManager<GameManager> {
         // update Bounding box
 
         // bullet and tank
-        foreach (var bullet in allBullet) {
-            var bulletCamp = bullet.camp;
-            foreach (var tank in allPlayer) {
-                if (tank.camp != bulletCamp && CollisionHelper.CheckCollision(bullet, tank)) {
-                    tempLst.Add(bullet);
+        foreach (var enemy in allEnmey) {
+            foreach (var player in allPlayer) {
+                if (CollisionHelper.CheckCollision(enemy, player)) {
+                    tempLst.Add(player);
                     AudioManager.PlayClipHitTank();
-                    tank.TakeDamage(bullet);
                 }
-            }
-
-            foreach (var tank in allEnmey) {
-                if (tank.camp != bulletCamp && CollisionHelper.CheckCollision(bullet, tank)) {
-                    tempLst.Add(bullet);
-                    AudioManager.PlayClipHitTank();
-                    tank.TakeDamage(bullet);
-                }
-            }
-        }
-
-        // bullet and camp
-        foreach (var bullet in allBullet) {
-            var bulletCamp = bullet.camp;
-            if (CollisionHelper.CheckCollision(bullet, camp)) {
-                tempLst.Add(camp);
-                break;
-            }
-        }
-
-        // bullet and map
-        foreach (var bullet in allBullet) {
-            var pos = bullet.pos;
-            Vector2 borderDir = CollisionHelper.GetBorderDir(bullet.dir);
-            var borderPos1 = pos + borderDir * bullet.radius;
-            var borderPos2 = pos - borderDir * bullet.radius;
-            tempPoss.Add(pos.Floor());
-            tempPoss.Add(borderPos1.Floor());
-            tempPoss.Add(borderPos2.Floor());
-
-            tempPoss.Clear();
-        }
-
-        // bullet bound detected 
-        foreach (var bullet in allBullet) {
-            if (CollisionHelper.IsOutOfBound(bullet.pos, min, max)) {
-                bullet.health = 0;
             }
         }
 
         // tank  and item
         var players = allPlayer.ToArray(); //item may modified the allPlayer list so copy it
-        foreach (var tank in players) {
+        foreach (var player in players) {
             foreach (var item in allItem) {
-                if (CollisionHelper.CheckCollision(tank, item)) {
-                    item.TriggelEffect(tank);
+                if (CollisionHelper.CheckCollision(player, item)) {
+                    item.TriggelEffect(player);
                     tempLst.Add(item);
                 }
             }
         }
 
-        foreach (var bullet in allBullet) {
-            if (bullet.health <= 0) {
-                tempLst.Add(bullet);
+        //Apply Bomb Effect
+        foreach (var bomb in allBomb) {
+            if (bomb.isExploded) {
+                ApplyExplodeCross(bomb);
+            }
+        }
+        //连炸效果
+        while (pendingExplodeBombs.Count > 0) {
+            var bomb = pendingExplodeBombs.Dequeue();
+            ApplyExplodeCross(bomb);
+        }
+        explodedPoss.Clear();
+        explodeEffectPos.Clear();
+
+        
+        foreach (var unit in allEnmey) {
+            if (unit.health <= 0) {
+                tempLst.Add(unit);
             }
         }
 
-        foreach (var bullet in allEnmey) {
-            if (bullet.health <= 0) {
-                tempLst.Add(bullet);
-            }
-        }
-
-        foreach (var bullet in allPlayer) {
-            if (bullet.health <= 0) {
-                tempLst.Add(bullet);
+        foreach (var unit in allPlayer) {
+            if (unit.health <= 0) {
+                tempLst.Add(unit);
             }
         }
 
         // destroy unit
         foreach (var unit in tempLst) {
-            GameManager.Instance.DestroyUnit(unit as Bomber, GameManager.Instance.allBullet);
+            GameManager.Instance.DestroyUnit(unit as Bomb, GameManager.Instance.allBomb);
             GameManager.Instance.DestroyUnit(unit as Walker, GameManager.Instance.allPlayer);
             GameManager.Instance.DestroyUnit(unit as Walker, GameManager.Instance.allEnmey);
             GameManager.Instance.DestroyUnit(unit as Item, GameManager.Instance.allItem);
@@ -335,24 +298,108 @@ public partial class GameManager : BaseManager<GameManager> {
         }
 
         if (allEnmey.Count == 0 && RemainEnemyCount <= 0) {
-            foreach (var playerInfo in allPlayerInfos) {
-                if (playerInfo != null) {
-                    playerInfo.lastLevelTankType = playerInfo.walker == null ? 0 : playerInfo.walker.detailType;
-                    playerInfo.isLiveInLastLevel = playerInfo.walker != null;
-                }
+            if (!HasCreatedCamp) {
+                CreateCamp();
             }
-
-            GameWin();
         }
 
-        if (camp == null) {
-            GameFalied();
+        if (camp != null) {
+            foreach (var player in allPlayer) {
+                if (CollisionHelper.CheckCollision(camp, player)) {
+                    GameWin();
+                    break;
+                }
+            }
         }
 
         tempLst.Clear();
     }
 
-   
+    //dangqianz
+    private HashSet<Vector2Int> explodedPoss = new HashSet<Vector2Int>();
+    private HashSet<Vector2Int> explodeEffectPos = new HashSet<Vector2Int>();
+    private Queue<Bomb> pendingExplodeBombs = new Queue<Bomb>();
+
+    public void ApplyExplodeCross(Bomb bomb){
+        AudioManager.PlayClipExploded();
+        var dist = bomb.damageRange;
+        var rawPos = bomb.pos.Floor();
+        tempLst.Add(bomb);
+        bomb.isExploded = true;
+        explodedPoss.Add(rawPos);
+        //Check 4 dir
+        for (int i = 0; i < (int) EDir.EnumCount; i++) {
+            var dirVec = CollisionHelper.GetDirVec((EDir) i);
+            ApplyExplodeLine(bomb, rawPos, dirVec);
+        }
+
+        //check the centerPos
+        ApplyExplodePoint(bomb, rawPos);
+    }
+
+    void ApplyExplodeLine(Bomb bomb, Vector2Int rawPos, Vector2Int dirVec){
+        var dist = bomb.damageRange;
+        for (int i = 1; i <= dist; i++) {
+            var iPos = rawPos + dirVec * i;
+            if (ApplyExplodePoint(bomb, iPos)) {
+                break;
+            }
+        }
+    }
+
+    private bool ApplyExplodePoint(Bomb bomb, Vector2Int iPos){
+        var id = levelMgr.Pos2TileID(iPos);
+        if (id == Global.TileID_Iron) {
+            //停下来
+            return true;
+        }
+
+        else if (id == Global.TileID_Brick) {
+            LevelManager.Instance.ReplaceTile(iPos, id, 0);
+        }
+        else if (id == 0) {
+            var allWalkers = GetWalkerFormPos(iPos);
+            foreach (var walker in allWalkers) {
+                if (walker.health > 0) {
+                    walker.health = 0;
+                    walker.killer = bomb.owner;
+                }
+            }
+
+            //连炸
+            foreach (var oBomb in allBomb) {
+                if (oBomb.pos.Floor() == iPos) {
+                    if (explodedPoss.Add(iPos)) {
+                        pendingExplodeBombs.Enqueue(oBomb);
+                    }
+                }
+            }
+        }
+        if (explodeEffectPos.Add(iPos)) {
+            ShowDiedEffect(iPos + Global.UnitSizeVec);
+        }
+        return false;
+    }
+
+    private List<Walker> tempList = new List<Walker>();
+
+    public List<Walker> GetWalkerFormPos(Vector2Int iPos){
+        tempList.Clear();
+        foreach (var walker in allEnmey) {
+            if (CollisionHelper.CheckCollision(walker, iPos)) {
+                tempList.Add(walker);
+            }
+        }
+
+        foreach (var walker in allPlayer) {
+            if (CollisionHelper.CheckCollision(walker, iPos)) {
+                tempList.Add(walker);
+            }
+        }
+
+        return tempList;
+    }
+
     #endregion
 
     #region GameStatus
@@ -364,6 +411,13 @@ public partial class GameManager : BaseManager<GameManager> {
     }
 
     private void GameWin(){
+        foreach (var playerInfo in allPlayerInfos) {
+            if (playerInfo != null) {
+                playerInfo.lastLevelTankType = playerInfo.walker == null ? 0 : playerInfo.walker.detailType;
+                playerInfo.isLiveInLastLevel = playerInfo.walker != null;
+            }
+        }
+
         IsGameOver = true;
         if (CurLevel >= MAX_LEVEL_COUNT) {
             ShowMessage("You Win!!");
@@ -384,7 +438,7 @@ public partial class GameManager : BaseManager<GameManager> {
     private void Clear(){
         Clear(allEnmey);
         Clear(allPlayer);
-        Clear(allBullet);
+        Clear(allBomb);
         Clear(allItem);
         DestoryUnit(ref myPlayer);
         DestoryUnit(ref camp);
@@ -412,10 +466,22 @@ public partial class GameManager : BaseManager<GameManager> {
 
         var playerInfo = GetPlayerFormTank(playerWalker);
         // TODO 最好不要这样做 而是以直接修改属性的方式 
-        var tank = DirectCreatePlayer(playerWalker.pos - TankBornOffset, level, playerInfo, false);
+        var tank = DirectCreatePlayer(playerWalker.pos - Global.UnitSizeVec, level, playerInfo, false);
         allPlayer.Remove(playerWalker);
         GameObject.Destroy(playerWalker.gameObject);
         return true;
+    }
+
+
+    public Camp CreateCamp(){
+        var pos = (campPos + Global.UnitSizeVec);
+        camp = GameObject.Instantiate(CampPrefab, transform.position + (Vector3) pos, Quaternion.identity,
+                transParentItem.parent)
+            .GetComponent<Camp>();
+        camp.pos = pos;
+        camp.size = Global.UnitSizeVec;
+        camp.radius = camp.size.magnitude;
+        return camp;
     }
 
     public void CreateEnemy(Vector2Int pos, int type){
@@ -427,22 +493,22 @@ public partial class GameManager : BaseManager<GameManager> {
     }
 
     public IEnumerator YieldCreateEnemy(Vector2Int pos, int type){
-        ShowBornEffect(pos + TankBornOffset);
+        ShowBornEffect(pos + Global.UnitSizeVec);
         yield return new WaitForSeconds(TankBornDelay);
-        var unit = CreateUnit(pos, tankPrefabs, type, TankBornOffset, transParentEnemy, EDir.Down, allEnmey);
+        var unit = CreateUnit(pos, tankPrefabs, type, Global.UnitSizeVec, transParentEnemy, EDir.Down, allEnmey);
         unit.camp = Global.EnemyCamp;
         RemainEnemyCount--;
     }
 
     public IEnumerator YiledCreatePlayer(Vector2 pos, int type, PlayerInfo playerInfo, bool isConsumeLife){
-        ShowBornEffect(pos + TankBornOffset);
+        ShowBornEffect(pos + Global.UnitSizeVec);
         AudioManager.PlayClipBorn();
         yield return new WaitForSeconds(TankBornDelay);
         DirectCreatePlayer(pos, type, playerInfo, isConsumeLife);
     }
 
     private Walker DirectCreatePlayer(Vector2 pos, int type, PlayerInfo playerInfo, bool isConsumeLife){
-        var unit = CreateUnit(pos, playerPrefabs, type, TankBornOffset, transParentPlayer, EDir.Up, allPlayer);
+        var unit = CreateUnit(pos, playerPrefabs, type, Global.UnitSizeVec, transParentPlayer, EDir.Up, allPlayer);
         unit.camp = Global.PlayerCamp;
         unit.brain.enabled = false;
         unit.name = "PlayerTank";
@@ -467,8 +533,8 @@ public partial class GameManager : BaseManager<GameManager> {
     }
 
 
-    public Bomber CreateBullet(Vector2 pos, EDir dir, Vector2 offset, int type){
-        return CreateUnit(pos, bulletPrefabs, type, offset, transParentBullet, dir, allBullet);
+    public Bomb CreateBomb(Vector2 pos, EDir dir, Vector2 offset, int type){
+        return CreateUnit(pos, bulletPrefabs, type, offset, transParentBullet, dir, allBomb);
     }
 
     public void CreateItem(Vector2 pos, int type){
@@ -493,12 +559,12 @@ public partial class GameManager : BaseManager<GameManager> {
         unit.dir = dir;
         unit.detailType = type;
         if (unit is Walker) {
-            unit.size = Vector2.one;
+            unit.size = Global.UnitSizeVec;
             unit.radius = unit.size.magnitude;
         }
 
         if (unit is Item) {
-            unit.size = Vector2.one;
+            unit.size = Global.UnitSizeVec;
             unit.radius = unit.size.magnitude;
         }
 
@@ -552,7 +618,6 @@ public partial class GameManager : BaseManager<GameManager> {
             unit.DoDestroy();
         }
     }
-
 
     private void DestoryUnit<T>(ref T unit) where T : Unit{
         if (unit != null) {

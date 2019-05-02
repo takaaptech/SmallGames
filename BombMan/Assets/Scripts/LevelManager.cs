@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 #if UNITY_EDITOR
@@ -52,7 +53,7 @@ public class LevelManager : BaseManager<LevelManager> {
         }
     }
 
-    public TileBase Pos2TileIDPos2Tile(Vector2Int pos, bool isCollider){
+    public TileBase Pos2TileIDPos2Tile(Vector2Int pos, bool isCollider = false){
         foreach (var tilemap in gridInfo.tileMaps) {
             if (isCollider && !tilemap.hasCollider) continue;
             var tile = tilemap.GetTile(pos);
@@ -63,7 +64,7 @@ public class LevelManager : BaseManager<LevelManager> {
         return null;
     }
 
-    public ushort Pos2TileID(Vector2Int pos, bool isCollider ){
+    public ushort Pos2TileID(Vector2Int pos, bool isCollider = false){
         for (int i = 0; i < gridInfo.tileMaps.Length; i++) {
             var tilemap = gridInfo.tileMaps[i];
             if (tilemap.isTagMap) continue;
@@ -90,6 +91,12 @@ public class LevelManager : BaseManager<LevelManager> {
         var go = GameObject.FindObjectOfType<Grid>();
         if (go != null) {
             var maps = go.GetComponentsInChildren<Tilemap>();
+            var tempMaps = go.GetComponentsInChildren<TileMapHelper>().ToList();
+            tempMaps.Sort((a, b) => { return b.layer - a.layer; });//重排优先级
+            Debug.Assert(tempMaps.Count == maps.Length,"Some tilemap do not have component!!" + typeof(TileMapHelper).ToString());
+            for (int i = 0; i < tempMaps.Count; i++) {
+                maps[i] = tempMaps[i].GetComponent<Tilemap>();
+            }
             for (int i = 0; i < maps.Length; i++) {
                 var tileMap = maps[i];
                 var tileMapInfo = info.GetMapInfo(tileMap.name);

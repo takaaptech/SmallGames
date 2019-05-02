@@ -7,25 +7,27 @@ public class Walker : Unit {
     public Skill skill = new Skill();
     public AIProxy brain = new AIProxy();
     public Walker killer;
+
     public Vector2 FireOffsetPos {
         get { return CollisionHelper.GetDirVec(dir); }
     }
-    
+
     public override void DoStart(){
         base.DoStart();
         skill.owner = this;
         brain.owner = this;
     }
 
-    public bool TakeDamage(Bomber bomber){
-        if (bomber.health >= health) {
-            bomber.health -= health;
+    public bool TakeDamage(Bomb bomb){
+        if (bomb.health >= health) {
+            bomb.health -= health;
             this.health = 0;
-            killer = bomber.owner;
+            killer = bomb.owner;
             return true;
         }
-        health -= bomber.health;
-        bomber.health = 0;
+
+        health -= bomb.health;
+        bomb.health = 0;
         return false;
     }
 
@@ -39,7 +41,39 @@ public class Walker : Unit {
     }
 
     public override void DoUpdate(float deltaTime){
-        base.DoUpdate(deltaTime);
+        //update position
+        var deg = CollisionHelper.GetDirDeg(dir);
+        transform.rotation = Quaternion.Euler(0, 0, deg);
+        //can move 判定
+        var dirVec = CollisionHelper.GetDirVec(dir);
+        var moveDist = (moveSpd * deltaTime);
+        var fTargetHead = pos + (TANK_HALF_LEN + moveDist) * (Vector2) dirVec;
+        var fPreviewHead = pos + (TANK_HALF_LEN + FORWARD_HEAD_DIST) * (Vector2) dirVec;
+
+        float maxMoveDist = moveSpd * deltaTime;
+        var headPos = pos + (TANK_HALF_LEN) * (Vector2) dirVec;
+        var dist = CollisionHelper.GetMaxMoveDist(dir, headPos, fTargetHead);
+        var dist2 = CollisionHelper.GetMaxMoveDist(dir, headPos, fPreviewHead);
+        maxMoveDist = Mathf.Min(maxMoveDist, dist, dist2);
+
+        var diffPos = maxMoveDist * (Vector2) dirVec;
+        pos = pos + diffPos;
+        if (camp == Global.PlayerCamp) {
+            if (isChangedDir) {
+                var idir = (int) (dir);
+                var isUD = idir % 2 == 0;
+                if (isUD) {
+                    pos.x = CollisionHelper.RoundIfNear(pos.x - 0.5f, SNAP_DIST) + 0.5f;
+                }
+                else {
+                    pos.y = CollisionHelper.RoundIfNear(pos.y - 0.5f, SNAP_DIST) + 0.5f;
+                }
+            }
+        }
+
+        transform.localPosition = pos;
+        isChangedDir = false;
+
         if (brain.enabled) {
             brain.DoUpdate(deltaTime);
         }
@@ -81,13 +115,14 @@ public class AIProxy {
     public float fireRate = 0.3f;
     public bool enabled = true;
 
-    
+
     public void DoUpdate(float deltaTime){
         timer += deltaTime;
         if (timer < updateInterval) {
             return;
         }
-        if(owner == null)
+
+        if (owner == null)
             return;
         timer = 0;
         Vector2Int dir = Vector2Int.zero;
@@ -95,7 +130,7 @@ public class AIProxy {
         if (isReachTheEnd) {
             List<int> allWalkableDir = new List<int>();
             for (int i = 0; i < (int) (EDir.EnumCount); i++) {
-                var vec = CollisionHelper.GetDirVec((EDir) i) * Walker.TANK_HALF_LEN;
+                var vec = (Vector2) CollisionHelper.GetDirVec((EDir) i) * Walker.TANK_HALF_LEN;
                 var pos = owner.pos + vec;
                 if (!CollisionHelper.HasCollider(pos)) {
                     allWalkableDir.Add(i);
@@ -103,15 +138,15 @@ public class AIProxy {
             }
 
             var count = allWalkableDir.Count;
-            if ( count> 0) {
+            if (count > 0) {
                 owner.dir = (EDir) (allWalkableDir[Random.Range(0, count)]);
             }
         }
 
-        var isNeedFire = Random.value < fireRate;
-        if (isNeedFire) {
-            owner.skill.Fire();
-        }
+        //var isNeedFire = Random.value < fireRate;
+        //if (isNeedFire) {
+        //    owner.skill.Fire();
+        //}
     }
 }
 
@@ -128,7 +163,7 @@ public class Skill {
 
     public void Fire(){
         CDTimer = CD;
-        var bullet = GameManager.Instance.CreateBullet(owner.pos, owner.dir, owner.FireOffsetPos, prefabType);
+        var bullet = GameManager.Instance.CreateBomb(owner.pos.Floor() + Global.UnitSizeVec, owner.dir, owner.FireOffsetPos, prefabType);
         bullet.owner = owner;
         bullet.camp = owner.camp;
     }

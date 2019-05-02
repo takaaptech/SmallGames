@@ -3,7 +3,7 @@ using UnityEngine;
 [System.Serializable]
 public class AudioManager : BaseManager<AudioManager> {
 
-    public static void PlayClipDestroyGrass(){Instance.PlayClip(Instance.destroyGrass);}
+    public static void PlayClipExploded(){Instance.PlayClip(Instance.exploded);}
     public static void PlayClipBorn(){Instance.PlayClip(Instance.born);}
     public static void PlayClipDied(){ Instance.PlayClip(Instance.died);}
     public static void PlayClipHitTank(){ Instance.PlayClip(Instance.hitTank);}
@@ -20,7 +20,7 @@ public class AudioManager : BaseManager<AudioManager> {
     public AudioClip hitBrick;
     public AudioClip hitIron;
     public AudioClip destroyIron;
-    public AudioClip destroyGrass;
+    public AudioClip exploded;
     public AudioClip addItem;
     public AudioClip bgMusic;
     public AudioClip startMusic;

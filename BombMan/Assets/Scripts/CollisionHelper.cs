@@ -38,7 +38,7 @@ public static class CollisionHelper {
         return borderDir;
     }
 
-    public const float TANK_BORDER_SIZE = 0.9f;
+    public const float TANK_BORDER_SIZE = 0.4f;
 
     public static float RoundIfNear(float val, float roundDist){
         var roundVal = Mathf.Round(val);
