@@ -5,10 +5,14 @@ using UnityEngine.UI;
 [System.Serializable]
 public class UIManager : BaseManager<UIManager> {
     public Text txtCurLevel;
-    public Text txtScore;
     public Text txtRemainEnemy;
-    public Text txtRemainLife;
     public Text txtMessage;
+    
+    public Text txtRemainLife;
+    public Text txtScore;
+    
+    public Text txtRemainLife2;
+    public Text txtScore2;
 
     public override void DoStart(){
         base.DoStart();
@@ -28,15 +32,17 @@ public class UIManager : BaseManager<UIManager> {
         txtCurLevel.text = val.ToString();
     }
 
-    void OnScoreChanged(int val){
-        txtScore.text = val.ToString();
-    }
-
-    void OnLifeChanged(int val){
-        txtRemainLife.text = val.ToString();
-    }
-
     void OnEnmeyCountChanged(int val){
         txtRemainEnemy.text = val.ToString();
+    }
+
+    void OnScoreChanged(PlayerInfo info){
+        Text txt = info.isMainPlayer ? txtScore : txtScore2;
+        txt.text = info.score.ToString();
+    }
+
+    void OnLifeChanged(PlayerInfo info){
+        Text txt = info.isMainPlayer ? txtRemainLife : txtRemainLife2;
+        txt.text = info.remainPlayerLife.ToString();
     }
 }

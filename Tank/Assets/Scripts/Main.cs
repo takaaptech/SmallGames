@@ -58,7 +58,7 @@ public class Main : MonoBehaviour {
         allMgrs.Add(levelMgr);
         allMgrs.Add(gameMgr);
         allMgrs.Add(uiMgr);
-        
+
         //SceneManager.sceneLoaded += OnSceneLoaded;
         foreach (var mgr in allMgrs) {
             mgr.Init(this);
@@ -71,8 +71,19 @@ public class Main : MonoBehaviour {
         foreach (var mgr in allMgrs) {
             mgr.DoStart();
         }
-        gameMgr.RemainPlayerLife = 3;
-        gameMgr.Score = 0;
+
+        int maxPlayerCount = 2;
+#if UNITY_STANDALONE || UNITY_STANDALONE_OSX
+        maxPlayerCount = 2;
+#else //手游 只有一个输入端
+        maxPlayerCount = 1;
+#endif
+        for (int i = 0; i < maxPlayerCount; i++) {
+            var info = new PlayerInfo();
+            info.remainPlayerLife = 3;
+            info.score = 0;
+            gameMgr.allPlayerInfos[i] = info;
+        }
         levelMgr.LoadGame(1);
     }
 

@@ -6,6 +6,17 @@ using System;
 using Random = UnityEngine.Random;
 
 [System.Serializable]
+public class PlayerInfo {
+    public bool isMainPlayer = false;
+    public Vector2Int bornPos;
+    public Tank tank;
+    public bool isLiveInLastLevel = true;
+    public int lastLevelTankType;
+    public int score;
+    public int remainPlayerLife;
+}
+
+[System.Serializable]
 public partial class GameManager : BaseManager<GameManager> {
     [Header("Transforms")] [HideInInspector]
     public Transform transParentPlayer;
@@ -30,17 +41,6 @@ public partial class GameManager : BaseManager<GameManager> {
         }
     }
 
-    [SerializeField] private int _RemainPlayerLife;
-
-    public int RemainPlayerLife {
-        get { return _RemainPlayerLife; }
-        set {
-            _RemainPlayerLife = value;
-            if (OnLifeCountChanged != null) OnLifeCountChanged(_RemainPlayerLife);
-        }
-    }
-
-    public int Score = 0;
     public int CurLevel = 0;
     public bool IsGameOver = false;
     public int MAX_LEVEL_COUNT = 2;
@@ -59,26 +59,32 @@ public partial class GameManager : BaseManager<GameManager> {
     public List<Item> allItem = new List<Item>();
     public Camp camp;
     public Tank myPlayer;
+    public Tank player2;
 
     [Header("MapInfos")]
     //大本营
     public BoundsInt campBound;
 
     public List<Vector2Int> enemyBornPoints = new List<Vector2Int>();
-    public Vector2Int playerBornPoint;
-    public Vector2Int player2BornPoint;
     public Vector2Int min;
     public Vector2Int max;
 
-    [Header("Events")] public Action<int> OnLifeCountChanged;
+    [Header("Events")] public Action<PlayerInfo> OnLifeCountChanged;
     public Action<int> OnEnmeyCountChanged;
     public Action<int> OnLevelChanged;
-    public Action<int> OnScoreChanged;
+    public Action<PlayerInfo> OnScoreChanged;
     public Action<string> OnMessage;
 
     //const variables
     public static Vector2 TankBornOffset = Vector2.one;
     public static float TankBornDelay = 1f;
+
+
+    public const int MAX_PLAYER_COUNT = 2;
+    public PlayerInfo[] allPlayerInfos = new PlayerInfo[MAX_PLAYER_COUNT];
+
+    HashSet<Vector2Int> tempPoss = new HashSet<Vector2Int>();
+    HashSet<Unit> tempLst = new HashSet<Unit>();
 
 
     #region LifeCycle
@@ -96,7 +102,6 @@ public partial class GameManager : BaseManager<GameManager> {
         transParentBullet = FuncCreateTrans("Bullets");
     }
 
-
     /// <summary>
     /// 正式开始游戏
     /// </summary>
@@ -107,21 +112,37 @@ public partial class GameManager : BaseManager<GameManager> {
         bornTimer = 0;
         RemainEnemyCount = initEnemyCount;
         camp = null;
-        myPlayer = null;
-
+        //read map info
         var tileInfo = main.levelMgr.GetMapInfo(Global.TileMapName_BornPos);
         var campPoss = tileInfo.GetAllTiles(LevelManager.ID2Tile(Global.TileID_Camp));
         Debug.Assert(campPoss != null && campPoss.Count == 1, "campPoss!= null&& campPoss.Count == 1");
         enemyBornPoints = tileInfo.GetAllTiles(LevelManager.ID2Tile(Global.TileID_BornPosEnemy));
-        var heroBornPoss = tileInfo.GetAllTiles(LevelManager.ID2Tile(Global.TileID_BornPosHero));
-        playerBornPoint = heroBornPoss[0];
-        if (heroBornPoss.Count > 1) {
-            player2BornPoint = heroBornPoss[1];
+        var bornPoss = tileInfo.GetAllTiles(LevelManager.ID2Tile(Global.TileID_BornPosHero));
+        Debug.Assert(bornPoss.Count == MAX_PLAYER_COUNT, "Map should has 2 player born pos");
+        // init player pos info
+        foreach (var info in allPlayerInfos) {
+            if (info != null) {
+                info.tank = null;
+            }
+        }
+
+        allPlayerInfos[0].isMainPlayer = true;
+        for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
+            var playerInfo = allPlayerInfos[i];
+            if (playerInfo != null) {
+                playerInfo.bornPos = bornPoss[i];
+            }
+        }
+
+        //create players
+        for (int i = 0; i < MAX_PLAYER_COUNT; i++) {
+            var playerInfo = allPlayerInfos[i];
+            if (playerInfo != null && !(playerInfo.remainPlayerLife == 0 && !playerInfo.isLiveInLastLevel)) {
+                CreatePlayer(playerInfo, playerInfo.lastLevelTankType, false);
+            }
         }
 
         AudioManager.PlayMusicStart();
-        //create players
-        CreatePlayer(playerBornPoint, lastLevelPlayerTankType);
         //create camps
         var pos = (campPoss[0] + Vector2.one);
         camp = GameObject.Instantiate(CampPrefab, transform.position + (Vector3) pos, Quaternion.identity,
@@ -132,33 +153,54 @@ public partial class GameManager : BaseManager<GameManager> {
         camp.radius = camp.size.magnitude;
     }
 
-    public int lastLevelPlayerTankType = 0;
 
-    public override void DoUpdate(float deltaTime){
-        if (IsGameOver) return;
-        //update player dir
-        if (myPlayer != null) {
-            var input = main.inputMgr;
-            var v = input.vertical;
-            var h = input.horizontal;
-            var absh = Mathf.Abs(h);
-            var absv = Mathf.Abs(v);
-            if (absh < 0.01f && absv < 0.01f) {
-                myPlayer.moveSpd = 0;
-            }
-            else {
-                myPlayer.dir = absh > absv
-                    ? (h < 0 ? EDir.Left : EDir.Right)
-                    : (v < 0 ? EDir.Down : EDir.Up);
-                myPlayer.moveSpd = myPlayer.MaxMoveSpd;
-            }
-
-            var isFire = input.firePressed || input.fireHeld;
-            if (isFire) {
-                myPlayer.Fire();
+    public PlayerInfo GetPlayerFormTank(Tank tank){
+        if (tank == null) return null;
+        foreach (var info in allPlayerInfos) {
+            if (info != null && info.tank == tank) {
+                return info;
             }
         }
 
+        return null;
+    }
+
+    void UpdatePlayer(PlayerInfo playerInfo, InputInfo inputInfo){
+        float inputV = inputInfo.vertical;
+        float intputH = inputInfo.horizontal;
+        bool isFirePressed = inputInfo.firePressed;
+        bool isFireHeld = inputInfo.fireHeld;
+
+        var tank = playerInfo.tank;
+        if (tank != null) {
+            var input = main.inputMgr;
+            var v = inputV;
+            var h = intputH;
+            var absh = Mathf.Abs(h);
+            var absv = Mathf.Abs(v);
+            if (absh < 0.01f && absv < 0.01f) {
+                tank.moveSpd = 0;
+            }
+            else {
+                tank.dir = absh > absv
+                    ? (h < 0 ? EDir.Left : EDir.Right)
+                    : (v < 0 ? EDir.Down : EDir.Up);
+                tank.moveSpd = tank.MaxMoveSpd;
+            }
+
+            var isFire = isFirePressed || isFireHeld;
+            if (isFire) {
+                tank.Fire();
+            }
+        }
+    }
+
+    public override void DoUpdate(float deltaTime){
+        if (IsGameOver) return;
+        //update player dir from input command
+        var input = main.inputMgr;
+        UpdatePlayer(allPlayerInfos[0], input.inputs[0]);
+        UpdatePlayer(allPlayerInfos[1], input.inputs[1]);
         //born enemy
         if (allEnmey.Count < MAX_ENEMY_COUNT && RemainEnemyCount > 0) {
             bornTimer += deltaTime;
@@ -171,7 +213,7 @@ public partial class GameManager : BaseManager<GameManager> {
             }
         }
 
-        //update pos
+        //update all units
         foreach (var target in allEnmey) {
             target.DoUpdate(deltaTime);
         }
@@ -186,11 +228,7 @@ public partial class GameManager : BaseManager<GameManager> {
 
         //collision detection
         ColliderDetected();
-        //
     }
-
-    HashSet<Vector2Int> tempPoss = new HashSet<Vector2Int>();
-    HashSet<Unit> tempLst = new HashSet<Unit>();
 
     private void ColliderDetected(){
         // update Bounding box
@@ -285,12 +323,28 @@ public partial class GameManager : BaseManager<GameManager> {
             GameManager.Instance.DestroyUnit(unit, ref camp);
         }
 
-        if (allPlayer.Count == 0 && RemainPlayerLife <= 0) {
-            GameFalied();
+        if (allPlayer.Count == 0) {
+            bool hasNoLife = true;
+            foreach (var info in allPlayerInfos) {
+                if (info != null && info.remainPlayerLife > 0) {
+                    hasNoLife = false;
+                    break;
+                }
+            }
+
+            if (hasNoLife) {
+                GameFalied();
+            }
         }
 
         if (allEnmey.Count == 0 && RemainEnemyCount <= 0) {
-            lastLevelPlayerTankType = myPlayer.detailType;
+            foreach (var playerInfo in allPlayerInfos) {
+                if (playerInfo != null) {
+                    playerInfo.lastLevelTankType = playerInfo.tank == null ? 0 : playerInfo.tank.detailType;
+                    playerInfo.isLiveInLastLevel = playerInfo.tank != null;
+                }
+            }
+
             GameWin();
         }
 
@@ -303,28 +357,40 @@ public partial class GameManager : BaseManager<GameManager> {
 
 
     private void CheckBulletWithMap(Vector2Int iPos, HashSet<Unit> tempLst, Bullet bullet){
-        var id = LevelManager.Instance.Pos2TileID(iPos,false);
+        var id = LevelManager.Instance.Pos2TileID(iPos, false);
         if (id != 0 && bullet.health > 0) {
             //collide bullet with world
             if (id == Global.TileID_Brick) {
-                if (bullet.camp == Global.PlayerCamp) {AudioManager.PlayClipHitBrick();}
+                if (bullet.camp == Global.PlayerCamp) {
+                    AudioManager.PlayClipHitBrick();
+                }
+
                 LevelManager.Instance.ReplaceTile(iPos, id, 0);
                 bullet.health--;
             }
             else if (id == Global.TileID_Iron) {
                 if (!bullet.canDestoryIron) {
-                    if (bullet.camp == Global.PlayerCamp) {AudioManager.PlayClipHitIron();}
+                    if (bullet.camp == Global.PlayerCamp) {
+                        AudioManager.PlayClipHitIron();
+                    }
+
                     bullet.health = 0;
                 }
                 else {
-                    if (bullet.camp == Global.PlayerCamp) {AudioManager.PlayClipDestroyIron();}
+                    if (bullet.camp == Global.PlayerCamp) {
+                        AudioManager.PlayClipDestroyIron();
+                    }
+
                     bullet.health = Mathf.Max(bullet.health - 2, 0);
                     LevelManager.Instance.ReplaceTile(iPos, id, 0);
                 }
             }
             else if (id == Global.TileID_Grass) {
                 if (bullet.canDestoryGrass) {
-                    if (bullet.camp == Global.PlayerCamp) {AudioManager.PlayClipDestroyGrass();}
+                    if (bullet.camp == Global.PlayerCamp) {
+                        AudioManager.PlayClipDestroyGrass();
+                    }
+
                     bullet.health -= 0;
                     LevelManager.Instance.ReplaceTile(iPos, id, 0);
                 }
@@ -386,16 +452,17 @@ public partial class GameManager : BaseManager<GameManager> {
 
     #region Create& Destroy
 
-    public bool Upgrade(Tank player, int upLevel = 1){
-        var level = player.detailType + 1;
+    public bool Upgrade(Tank playerTank, int upLevel = 1){
+        var level = playerTank.detailType + 1;
         if (level >= playerPrefabs.Count) {
             return false;
         }
 
+        var playerInfo = GetPlayerFormTank(playerTank);
         // TODO 最好不要这样做 而是以直接修改属性的方式 
-        var tank = DirectCreatePlayer(player.pos - TankBornOffset, level);
-        allPlayer.Remove(player);
-        GameObject.Destroy(player.gameObject);
+        var tank = DirectCreatePlayer(playerTank.pos - TankBornOffset, level, playerInfo, false);
+        allPlayer.Remove(playerTank);
+        GameObject.Destroy(playerTank.gameObject);
         return true;
     }
 
@@ -403,8 +470,8 @@ public partial class GameManager : BaseManager<GameManager> {
         StartCoroutine(YieldCreateEnemy(pos, type));
     }
 
-    public void CreatePlayer(Vector2 pos, int type){
-        StartCoroutine(YiledCreatePlayer(pos, type));
+    public void CreatePlayer(PlayerInfo playerInfo, int type = 0, bool isConsumeLife = true){
+        StartCoroutine(YiledCreatePlayer(playerInfo.bornPos, type, playerInfo, isConsumeLife));
     }
 
     public IEnumerator YieldCreateEnemy(Vector2Int pos, int type){
@@ -415,20 +482,27 @@ public partial class GameManager : BaseManager<GameManager> {
         RemainEnemyCount--;
     }
 
-    public IEnumerator YiledCreatePlayer(Vector2 pos, int type){
+    public IEnumerator YiledCreatePlayer(Vector2 pos, int type, PlayerInfo playerInfo, bool isConsumeLife){
         ShowBornEffect(pos + TankBornOffset);
         AudioManager.PlayClipBorn();
         yield return new WaitForSeconds(TankBornDelay);
-        DirectCreatePlayer(pos, type);
+        DirectCreatePlayer(pos, type, playerInfo, isConsumeLife);
     }
 
-    private Tank DirectCreatePlayer(Vector2 pos, int type){
+    private Tank DirectCreatePlayer(Vector2 pos, int type, PlayerInfo playerInfo, bool isConsumeLife){
         var unit = CreateUnit(pos, playerPrefabs, type, TankBornOffset, transParentPlayer, EDir.Up, allPlayer);
         unit.camp = Global.PlayerCamp;
         unit.brain.enabled = false;
-        myPlayer = unit;
-        myPlayer.name = "PlayerTank";
-        RemainPlayerLife--;
+        unit.name = "PlayerTank";
+        playerInfo.tank = unit;
+        if (isConsumeLife) {
+            playerInfo.remainPlayerLife--;
+        }
+
+        if (OnLifeCountChanged != null) {
+            OnLifeCountChanged(playerInfo);
+        }
+
         return unit;
     }
 
@@ -498,9 +572,11 @@ public partial class GameManager : BaseManager<GameManager> {
                 ShowDiedEffect(unit.pos);
                 AudioManager.PlayClipDied();
                 if (tank.camp == Global.EnemyCamp) {
-                    Score += (tank.detailType + 1) * 100;
+                    var info = GetPlayerFormTank(tank.killer);
+                    info.score += (tank.detailType + 1) * 100;
+
                     if (OnScoreChanged != null) {
-                        OnScoreChanged(Score);
+                        OnScoreChanged(info);
                     }
 
                     if ( //tank.detailType >= Global.ItemTankType &&
@@ -512,8 +588,10 @@ public partial class GameManager : BaseManager<GameManager> {
                 }
 
                 if (tank.camp == Global.PlayerCamp) {
-                    if (RemainPlayerLife > 0) {
-                        CreatePlayer(playerBornPoint, 0);
+                    var info = GetPlayerFormTank(tank);
+                    Debug.Assert(info != null, " player's tank have no owner");
+                    if (info.remainPlayerLife > 0) {
+                        CreatePlayer(info, 0);
                     }
                 }
             }

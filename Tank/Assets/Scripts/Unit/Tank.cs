@@ -6,7 +6,7 @@ using Random = UnityEngine.Random;
 public class Tank : Unit {
     public Skill skill = new Skill();
     public AIProxy brain = new AIProxy();
-
+    public Tank killer;
     public Vector2 FireOffsetPos {
         get { return CollisionHelper.GetDirVec(dir); }
     }
@@ -21,6 +21,7 @@ public class Tank : Unit {
         if (bullet.health >= health) {
             bullet.health -= health;
             this.health = 0;
+            killer = bullet.owner;
             return true;
         }
         health -= bullet.health;

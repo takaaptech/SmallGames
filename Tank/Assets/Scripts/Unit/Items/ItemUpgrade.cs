@@ -1,7 +1,7 @@
 using UnityEngine;
 
 public class ItemUpgrade : Item {
-    protected override void OnTriggelEffect(Tank unit){
-        GameManager.Instance.Upgrade(unit, 1);
+    protected override void OnTriggerEffect(Tank trigger){
+        GameManager.Instance.Upgrade(trigger, 1);
     }
 }

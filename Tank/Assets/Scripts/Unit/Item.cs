@@ -80,9 +80,9 @@ public class Item : Unit {
         if (!isEnable) return;
         isEnable = false;
         AudioManager.PlayMusicGetItem();
-        OnTriggelEffect(unit);
+        OnTriggerEffect(unit);
     }
 
-    protected virtual void OnTriggelEffect(Tank unit){
+    protected virtual void OnTriggerEffect(Tank trigger){
     }
 }
