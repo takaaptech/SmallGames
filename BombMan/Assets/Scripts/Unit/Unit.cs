@@ -48,7 +48,7 @@ public class Unit : MonoBehaviour {
     public virtual void DoUpdate(float deltaTime){ }
 
 
-    public void DoDestroy(){
+    public virtual void DoDestroy(){
         GameObject.Destroy(gameObject);
     }
 

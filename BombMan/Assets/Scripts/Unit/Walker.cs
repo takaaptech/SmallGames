@@ -83,6 +83,22 @@ public class Walker : Unit {
         }
     }
 
+    public override void DoDestroy(){
+        var gameMgr = GameManager.Instance;
+        var tank = this;
+        if (tank != null) {
+            if (tank.camp == Global.EnemyCamp) {
+                gameMgr.DestroyEnemy(tank);
+            }
+
+            if (tank.camp == Global.PlayerCamp) {
+                gameMgr.DestroyPlayer(tank);
+            }
+        }
+        base.DoDestroy();
+    }
+
+
     public Vector2 GetHeadPos(float len = FORWARD_HEAD_DIST){
         var dirVec = CollisionHelper.GetDirVec(dir);
         var fTargetHead = pos + (TANK_HALF_LEN + len) * (Vector2) dirVec;
@@ -158,12 +174,18 @@ public class Skill {
     public int prefabType;
 
     public bool CanFire(){
-        return CDTimer <= 0;
+        if (CDTimer > 0)
+            return false;
+        //check targetTile is air
+        var ownPos = owner.pos.Floor() + CollisionHelper.GetDirVec(owner.dir);
+        var id = LevelManager.Instance.Pos2TileID(ownPos, true);
+        return id == 0;
     }
 
     public void Fire(){
         CDTimer = CD;
-        var bullet = GameManager.Instance.CreateBomb(owner.pos.Floor() + Global.UnitSizeVec, owner.dir, owner.FireOffsetPos, prefabType);
+        var bullet = GameManager.Instance.CreateBomb(owner.pos.Floor() + Global.UnitSizeVec, owner.dir,
+            owner.FireOffsetPos, prefabType);
         bullet.owner = owner;
         bullet.camp = owner.camp;
     }

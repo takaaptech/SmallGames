@@ -104,6 +104,10 @@ public static class CollisionHelper {
     public static bool HasCollider(Vector2 pos){
         var iPos = pos.Floor();
         var id = LevelManager.Instance.Pos2TileID(iPos, true);
+        // 还需要检验炸弹
+        if (GameManager.Instance.GetBombFormPos(iPos) != null) {
+            return true;
+        }
         return id != 0;
     }
 

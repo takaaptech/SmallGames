@@ -57,6 +57,8 @@ public partial class GameManager : BaseManager<GameManager> {
     private static int CurUnitID = 0;
     private Dictionary<int, PlayerInfo> id2PlayerInfo = new Dictionary<int, PlayerInfo>();
 
+    private Dictionary<Vector2Int, Bomb> pos2Bomb = new Dictionary<Vector2Int, Bomb>();
+
     [Header("MapInfos")]
     //大本营
     public BoundsInt campBound;
@@ -106,9 +108,11 @@ public partial class GameManager : BaseManager<GameManager> {
     public void StartGame(int level){
         levelMgr = LevelManager.Instance;
         //reset variables
-        CurLevel = level;
         CurUnitID = 0;
         id2PlayerInfo.Clear();
+        pos2Bomb.Clear();
+
+        CurLevel = level;
         IsGameOver = false;
         bornTimer = 0;
         camp = null;
@@ -326,7 +330,6 @@ public partial class GameManager : BaseManager<GameManager> {
     private Queue<Bomb> pendingExplodeBombs = new Queue<Bomb>();
 
     public void ApplyExplodeCross(Bomb bomb){
-        AudioManager.PlayClipExploded();
         var dist = bomb.damageRange;
         var rawPos = bomb.pos.Floor();
         tempLst.Add(bomb);
@@ -407,6 +410,14 @@ public partial class GameManager : BaseManager<GameManager> {
         return tempList;
     }
 
+    public Bomb GetBombFormPos(Vector2Int iPos){
+        if (pos2Bomb.TryGetValue(iPos, out Bomb bomb)) {
+            return bomb;
+        }
+
+        return null;
+    }
+
     #endregion
 
     #region GameStatus
@@ -448,8 +459,8 @@ public partial class GameManager : BaseManager<GameManager> {
         Clear(allPlayer);
         Clear(allBomb);
         Clear(allItem);
-        DestoryUnit(ref myPlayer);
-        DestoryUnit(ref camp);
+        DestroyUnit(myPlayer, ref myPlayer);
+        DestroyUnit(camp, ref camp);
     }
 
     private void Clear<T>(List<T> lst) where T : Unit{
@@ -550,7 +561,11 @@ public partial class GameManager : BaseManager<GameManager> {
 
 
     public Bomb CreateBomb(Vector2 pos, EDir dir, Vector2 offset, int type){
-        return CreateUnit(pos, bulletPrefabs, type, offset, transParentBullet, dir, allBomb);
+        var bomb = CreateUnit(pos, bulletPrefabs, type, offset, transParentBullet, dir, allBomb);
+        var iPos =( pos + offset).Floor();
+        
+        pos2Bomb.Add(iPos, bomb);
+        return bomb;
     }
 
     public void CreateItem(Vector2 pos, int type){
@@ -590,11 +605,56 @@ public partial class GameManager : BaseManager<GameManager> {
         return unit;
     }
 
+    public void DestroyPlayer(Walker walker){
+        ShowDiedEffect(walker.pos);
+        AudioManager.PlayClipDied();
+        var info = GetPlayerFormID(walker.UnitID);
+        Debug.Assert(info != null, " player's tank have no owner");
+        if (info.remainPlayerLife > 0) {
+            CreatePlayer(info, 0);
+        }
+    }
+
+    public void DestroyBomb(Bomb bomb){
+        AudioManager.PlayClipExploded();
+        pos2Bomb.Remove(bomb.pos.Floor());
+    }
+
+    public void DestroyCamp(Camp unit){
+        ShowDiedEffect(unit.pos);
+        AudioManager.PlayClipDied();
+    }
+
+    public void DestroyEnemy(Walker walker){
+        ShowDiedEffect(walker.pos);
+        AudioManager.PlayClipDied();
+        var info = GetPlayerFormID(walker.killerID);
+        info.score += (walker.detailType + 1) * 100;
+        if (OnEnmeyCountChanged != null) {
+            OnEnmeyCountChanged(allEnmey.Count);
+        }
+
+        if (OnScoreChanged != null) {
+            OnScoreChanged(info);
+        }
+
+        if ( //tank.detailType >= Global.ItemTankType &&
+            itemPrefabs.Count > 0) {
+            var id = 1;
+            Vector2Int pos = Vector2Int.up;
+            while (id != 0) {
+                var x = Random.Range(min.x + 1, max.x - 3);
+                var y = Random.Range(min.y + 1, max.y - 3);
+                pos = new Vector2Int(x, y);
+                id = LevelManager.Instance.Pos2TileID(pos);
+            }
+
+            CreateItem(pos, Random.Range(0, itemPrefabs.Count));
+        }
+    }
+
     public void DestroyUnit<T>(Unit unit, ref T rUnit) where T : Unit{
         if (unit is T) {
-            GameObject.Destroy(unit.gameObject);
-            ShowDiedEffect(unit.pos);
-            AudioManager.PlayClipDied();
             unit.DoDestroy();
             rUnit = null;
         }
@@ -602,54 +662,7 @@ public partial class GameManager : BaseManager<GameManager> {
 
     public void DestroyUnit<T>(T unit, List<T> lst) where T : Unit{
         if (lst.Remove(unit)) {
-            var tank = unit as Walker;
-            if (tank != null) {
-                ShowDiedEffect(unit.pos);
-                AudioManager.PlayClipDied();
-                if (tank.camp == Global.EnemyCamp) {
-                    var info = GetPlayerFormID(tank.killerID);
-                    info.score += (tank.detailType + 1) * 100;
-                    if (OnEnmeyCountChanged != null) {
-                        OnEnmeyCountChanged(allEnmey.Count);
-                    }
-
-                    if (OnScoreChanged != null) {
-                        OnScoreChanged(info);
-                    }
-
-                    if ( //tank.detailType >= Global.ItemTankType &&
-                        itemPrefabs.Count > 0) {
-                        var id = 1;
-                        Vector2Int pos = Vector2Int.up;
-                        while (id != 0) {
-                            var x = Random.Range(min.x + 1, max.x - 3);
-                            var y = Random.Range(min.y + 1, max.y - 3);
-                            pos = new Vector2Int(x, y);
-                            id = levelMgr.Pos2TileID(pos);
-                        }
-
-                        CreateItem(pos, Random.Range(0, itemPrefabs.Count));
-                    }
-                }
-
-                if (tank.camp == Global.PlayerCamp) {
-                    var info = GetPlayerFormID(tank.UnitID);
-                    Debug.Assert(info != null, " player's tank have no owner");
-                    if (info.remainPlayerLife > 0) {
-                        CreatePlayer(info, 0);
-                    }
-                }
-            }
-
-
             unit.DoDestroy();
-        }
-    }
-
-    private void DestoryUnit<T>(ref T unit) where T : Unit{
-        if (unit != null) {
-            GameObject.Destroy(unit.gameObject);
-            unit = null;
         }
     }
 
