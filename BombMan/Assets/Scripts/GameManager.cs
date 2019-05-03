@@ -54,6 +54,9 @@ public partial class GameManager : BaseManager<GameManager> {
     public Walker myPlayer;
     public Walker player2;
 
+    private static int CurUnitID = 0;
+    private Dictionary<int, PlayerInfo> id2PlayerInfo = new Dictionary<int, PlayerInfo>();
+
     [Header("MapInfos")]
     //大本营
     public BoundsInt campBound;
@@ -80,6 +83,7 @@ public partial class GameManager : BaseManager<GameManager> {
     public Vector2Int campPos;
     public bool HasCreatedCamp = false;
 
+    [Header("PlayerInit attribution")] public int PlayerBornInvincibleDuration = 3;
 
     #region LifeCycle
 
@@ -103,6 +107,8 @@ public partial class GameManager : BaseManager<GameManager> {
         levelMgr = LevelManager.Instance;
         //reset variables
         CurLevel = level;
+        CurUnitID = 0;
+        id2PlayerInfo.Clear();
         IsGameOver = false;
         bornTimer = 0;
         camp = null;
@@ -154,14 +160,12 @@ public partial class GameManager : BaseManager<GameManager> {
     private float EndCheckMinTime = 5;
     private float gameTimer;
 
-    public PlayerInfo GetPlayerFormTank(Walker walker){
-        if (walker == null) return null;
-        foreach (var info in allPlayerInfos) {
-            if (info != null && info.walker == walker) {
-                return info;
-            }
+    public PlayerInfo GetPlayerFormID(int playerID){
+        if (id2PlayerInfo.TryGetValue(playerID, out PlayerInfo info)) {
+            return info;
         }
 
+        Debug.Assert(info != null, "Error :can not find a player with a playerID" + playerID);
         return null;
     }
 
@@ -223,11 +227,13 @@ public partial class GameManager : BaseManager<GameManager> {
         // update Bounding box
 
         // bullet and tank
-        foreach (var enemy in allEnmey) {
-            foreach (var player in allPlayer) {
-                if (CollisionHelper.CheckCollision(enemy, player)) {
-                    tempLst.Add(player);
-                    AudioManager.PlayClipHitTank();
+        foreach (var player in allPlayer) {
+            if (!player.isInvicible) { //ignore invicible player
+                foreach (var enemy in allEnmey) {
+                    if (CollisionHelper.CheckCollision(enemy, player)) {
+                        tempLst.Add(player);
+                        AudioManager.PlayClipHitTank();
+                    }
                 }
             }
         }
@@ -359,9 +365,9 @@ public partial class GameManager : BaseManager<GameManager> {
         else if (id == 0) {
             var allWalkers = GetWalkerFormPos(iPos);
             foreach (var walker in allWalkers) {
-                if (walker.health > 0) {
+                if (!walker.isInvicible && walker.health > 0) {
                     walker.health = 0;
-                    walker.killer = bomb.owner;
+                    walker.killerID = bomb.owner.UnitID;
                 }
             }
 
@@ -466,7 +472,7 @@ public partial class GameManager : BaseManager<GameManager> {
             return false;
         }
 
-        var playerInfo = GetPlayerFormTank(playerWalker);
+        var playerInfo = GetPlayerFormID(playerWalker.UnitID);
         // TODO 最好不要这样做 而是以直接修改属性的方式 
         var tank = DirectCreatePlayer(playerWalker.pos - Global.UnitSizeVec, level, playerInfo, false);
         allPlayer.Remove(playerWalker);
@@ -513,7 +519,11 @@ public partial class GameManager : BaseManager<GameManager> {
         unit.camp = Global.PlayerCamp;
         unit.brain.enabled = false;
         unit.name = "PlayerTank";
-
+        var buff = unit.gameObject.AddComponent<BuffInvicible>();
+        buff.duration = PlayerBornInvincibleDuration;
+        buff.OnAttach();
+        id2PlayerInfo.Add(unit.UnitID, playerInfo);
+        //add invincible buff
         if (playerInfo.isMainPlayer) {
             virtualCamera.Follow = unit.transform;
         }
@@ -564,6 +574,7 @@ public partial class GameManager : BaseManager<GameManager> {
         unit.pos = createPos;
         unit.dir = dir;
         unit.detailType = type;
+        unit.UnitID = CurUnitID++;
         if (unit is Walker) {
             unit.size = Global.UnitSizeVec * Global.UnitColliseScale;
             unit.radius = unit.size.magnitude;
@@ -596,7 +607,7 @@ public partial class GameManager : BaseManager<GameManager> {
                 ShowDiedEffect(unit.pos);
                 AudioManager.PlayClipDied();
                 if (tank.camp == Global.EnemyCamp) {
-                    var info = GetPlayerFormTank(tank.killer);
+                    var info = GetPlayerFormID(tank.killerID);
                     info.score += (tank.detailType + 1) * 100;
                     if (OnEnmeyCountChanged != null) {
                         OnEnmeyCountChanged(allEnmey.Count);
@@ -622,7 +633,7 @@ public partial class GameManager : BaseManager<GameManager> {
                 }
 
                 if (tank.camp == Global.PlayerCamp) {
-                    var info = GetPlayerFormTank(tank);
+                    var info = GetPlayerFormID(tank.UnitID);
                     Debug.Assert(info != null, " player's tank have no owner");
                     if (info.remainPlayerLife > 0) {
                         CreatePlayer(info, 0);

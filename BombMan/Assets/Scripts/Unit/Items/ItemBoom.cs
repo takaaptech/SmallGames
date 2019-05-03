@@ -7,7 +7,7 @@ public class ItemBoom : Item {
         foreach (var tank in GameManager.Instance.allEnmey) {
             if (tank.health > 0) {
                 tank.health = 0;
-                tank.killer = trigger;
+                tank.killerID = trigger.UnitID;
                 if (++killCount >= maxCount) {
                     return;
                 }

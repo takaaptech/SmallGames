@@ -6,7 +6,7 @@ using Random = UnityEngine.Random;
 public class Walker : Unit {
     public Skill skill = new Skill();
     public AIProxy brain = new AIProxy();
-    public Walker killer;
+    public int killerID;
 
     public Vector2 FireOffsetPos {
         get { return CollisionHelper.GetDirVec(dir); }
@@ -22,7 +22,7 @@ public class Walker : Unit {
         if (bomb.health >= health) {
             bomb.health -= health;
             this.health = 0;
-            killer = bomb.owner;
+            killerID = bomb.owner.UnitID;
             return true;
         }
 

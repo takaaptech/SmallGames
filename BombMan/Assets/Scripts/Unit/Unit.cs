@@ -7,12 +7,12 @@ public class Unit : MonoBehaviour {
     public int camp; //阵营
 
     public int detailType;
-
+    public int UnitID;
     [Header("Move Infos")] public int health = 1;
     public float moveSpd = 2;
     public float MaxMoveSpd = 2;
     public EDir _dir;
-
+    public bool isInvicible = false;
     public EDir dir {
         get { return _dir; }
         set {
