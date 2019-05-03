@@ -16,4 +16,5 @@ public static class Global {
     
     public const float UnitSize = 0.5f;
     public static Vector2 UnitSizeVec = new Vector2(UnitSize,UnitSize);
+    public const float UnitColliseScale = 0.95f;
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using System.Collections;
 using System;
+using Cinemachine;
 using Random = UnityEngine.Random;
 
 [System.Serializable]
@@ -18,6 +19,8 @@ public class PlayerInfo {
 
 [System.Serializable]
 public partial class GameManager : BaseManager<GameManager> {
+    public CinemachineVirtualCamera virtualCamera;
+
     [Header("Transforms")] [HideInInspector]
     public Transform transParentPlayer;
 
@@ -150,6 +153,7 @@ public partial class GameManager : BaseManager<GameManager> {
     private bool isInited = false;
     private float EndCheckMinTime = 5;
     private float gameTimer;
+
     public PlayerInfo GetPlayerFormTank(Walker walker){
         if (walker == null) return null;
         foreach (var info in allPlayerInfos) {
@@ -509,6 +513,11 @@ public partial class GameManager : BaseManager<GameManager> {
         unit.camp = Global.PlayerCamp;
         unit.brain.enabled = false;
         unit.name = "PlayerTank";
+
+        if (playerInfo.isMainPlayer) {
+            virtualCamera.Follow = unit.transform;
+        }
+
         playerInfo.walker = unit;
         if (isConsumeLife) {
             playerInfo.remainPlayerLife--;
@@ -535,7 +544,6 @@ public partial class GameManager : BaseManager<GameManager> {
     }
 
     public void CreateItem(Vector2 pos, int type){
-        Debug.LogError("CreateItem " + pos);
         CreateUnit(pos, itemPrefabs, type, Global.UnitSizeVec, transParentItem, EDir.Up, allItem);
     }
 
@@ -557,12 +565,12 @@ public partial class GameManager : BaseManager<GameManager> {
         unit.dir = dir;
         unit.detailType = type;
         if (unit is Walker) {
-            unit.size = Global.UnitSizeVec;
+            unit.size = Global.UnitSizeVec * Global.UnitColliseScale;
             unit.radius = unit.size.magnitude;
         }
 
         if (unit is Item) {
-            unit.size = Global.UnitSizeVec;
+            unit.size = Global.UnitSizeVec * Global.UnitColliseScale;
             unit.radius = unit.size.magnitude;
         }
 
@@ -608,8 +616,8 @@ public partial class GameManager : BaseManager<GameManager> {
                             pos = new Vector2Int(x, y);
                             id = levelMgr.Pos2TileID(pos);
                         }
-            
-                        CreateItem(pos , Random.Range(0, itemPrefabs.Count));
+
+                        CreateItem(pos, Random.Range(0, itemPrefabs.Count));
                     }
                 }
 
