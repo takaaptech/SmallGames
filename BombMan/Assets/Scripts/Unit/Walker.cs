@@ -71,6 +71,7 @@ public class Walker : Unit {
             }
         }
 
+
         transform.localPosition = pos;
         isChangedDir = false;
 

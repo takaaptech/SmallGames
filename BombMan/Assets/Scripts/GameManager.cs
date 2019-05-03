@@ -459,7 +459,6 @@ public partial class GameManager : BaseManager<GameManager> {
         Clear(allPlayer);
         Clear(allBomb);
         Clear(allItem);
-        DestroyUnit(myPlayer, ref myPlayer);
         DestroyUnit(camp, ref camp);
     }
 

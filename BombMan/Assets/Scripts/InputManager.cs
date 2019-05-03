@@ -50,6 +50,24 @@ public class InputManager : BaseManager<InputManager> {
 
         input.horizontal = Mathf.Clamp(input.horizontal, -1f, 1f);
         input.vertical = Mathf.Clamp(input.vertical, -1f, 1f);
+#if UNITY_EDITOR
+        if (Input.GetKeyDown(KeyCode.F1)) {
+            GameManager.Instance.Upgrade(GameManager.Instance.allPlayerInfos[0].walker);
+        }
+        if (Input.GetKeyDown(KeyCode.F2)) {
+            var id = GameManager.Instance.allPlayerInfos[0].walker.UnitID;
+            int killCount = 0;
+            foreach (var tank in GameManager.Instance.allEnmey) {
+                if (tank.health > 0) {
+                    tank.health = 0;
+                    tank.killerID = id;
+                    if (++killCount >= 3) {
+                        return;
+                    }
+                }
+            }
+        }
+#endif
     }
 
 
