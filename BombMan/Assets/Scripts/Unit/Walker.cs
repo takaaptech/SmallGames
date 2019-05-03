@@ -96,6 +96,7 @@ public class Walker : Unit {
                 gameMgr.DestroyPlayer(tank);
             }
         }
+
         base.DoDestroy();
     }
 
@@ -131,8 +132,16 @@ public class AIProxy {
     public float updateInterval = 1;
     public float fireRate = 0.3f;
     public bool enabled = true;
+    /// <summary>
+    /// the rate to changed dir if it can
+    /// </summary>
+    public float turnRate = 0.2f;
+    private const float TargetDist = 0.1f;
+    public const float sqrtTargetDist = TargetDist * TargetDist;
 
-
+    private Vector2Int TargetPos = new Vector2Int(-1000,-1000);
+    private EDir TargetDir = EDir.Up;
+    
     public void DoUpdate(float deltaTime){
         timer += deltaTime;
         if (timer < updateInterval) {
@@ -158,13 +167,29 @@ public class AIProxy {
             if (count > 0) {
                 owner.dir = (EDir) (allWalkableDir[Random.Range(0, count)]);
             }
+
+            return;
         }
 
-        //var isNeedFire = Random.value < fireRate;
-        //if (isNeedFire) {
-        //    owner.skill.Fire();
-        //}
+        var iPos = owner.pos.Floor();
+        if ((owner.pos - (iPos + Global.UnitSizeVec)).sqrMagnitude < sqrtTargetDist) {
+            if (Random.value > turnRate) {
+                return;
+            }
+            //random change dir if it can 
+            var borderDir = CollisionHelper.GetDirVec((EDir) ((int) (owner.dir + 1) % (int) EDir.EnumCount));
+            var iBorder1 = iPos + borderDir;
+            var iBorder2 = iPos - borderDir;
+            if (!CollisionHelper.HasCollider(iBorder1)) {
+                owner.dir = CollisionHelper.GetEDirFromVec(borderDir);
+            }
+            else if (!CollisionHelper.HasCollider(iBorder2)) {
+                owner.dir = CollisionHelper.GetEDirFromVec(Vector2Int.zero -borderDir);
+            }
+        }
+        
     }
+
 }
 
 [Serializable]

@@ -515,6 +515,7 @@ public partial class GameManager : BaseManager<GameManager> {
         yield return new WaitForSeconds(TankBornDelay);
         var unit = CreateUnit(pos, tankPrefabs, type, Global.UnitSizeVec, transParentEnemy, EDir.Down, allEnmey);
         unit.camp = Global.EnemyCamp;
+        unit.name = "Enemy " + unit.UnitID;
     }
 
     public IEnumerator YiledCreatePlayer(Vector2 pos, int type, PlayerInfo playerInfo, bool isConsumeLife){

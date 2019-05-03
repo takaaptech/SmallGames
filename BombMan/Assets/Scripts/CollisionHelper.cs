@@ -24,6 +24,21 @@ public static class CollisionHelper {
         return Vector2Int.up;
     }
 
+    public static EDir GetEDirFromVec(Vector2Int vec){
+        if (vec.sqrMagnitude != 1) {
+            return EDir.EnumCount;
+        }
+
+        var num = vec.y * 2 + vec.x;
+        switch (num) {
+            case 2: return  EDir.Up;
+            case -2: return EDir.Down;
+            case 1: return  EDir.Right;
+            case -1: return EDir.Left;
+        }
+        return EDir.EnumCount;
+    }
+
     public static int GetDirDeg(EDir dir){
         return ((int) dir) * 90;
     }
@@ -108,6 +123,7 @@ public static class CollisionHelper {
         if (GameManager.Instance.GetBombFormPos(iPos) != null) {
             return true;
         }
+
         return id != 0;
     }
 
