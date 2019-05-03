@@ -89,38 +89,53 @@ public class LevelManager : BaseManager<LevelManager> {
         var reader = new BinaryReader(new MemoryStream(bytes));
         var info = TileMapSerializer.ReadGrid(reader);
         var go = GameObject.FindObjectOfType<Grid>();
-        if (go != null) {
-            var maps = go.GetComponentsInChildren<Tilemap>();
-            var tempMaps = go.GetComponentsInChildren<TileMapHelper>().ToList();
-            tempMaps.Sort((a, b) => { return b.layer - a.layer; });//重排优先级
-            Debug.Assert(tempMaps.Count == maps.Length,"Some tilemap do not have component!!" + typeof(TileMapHelper).ToString());
-            for (int i = 0; i < tempMaps.Count; i++) {
-                maps[i] = tempMaps[i].GetComponent<Tilemap>();
-            }
-            for (int i = 0; i < maps.Length; i++) {
-                var tileMap = maps[i];
-                var tileMapInfo = info.GetMapInfo(tileMap.name);
-                if (tileMapInfo == null)
-                    continue;
-                tileMapInfo.tilemap = tileMap;
-                tileMap.ClearAllTiles();
-                tileMap.SetTiles(tileMapInfo.GetAllPositions(), tileMapInfo.GetAllTiles());
-                if (Application.isPlaying) {
-                    if (tileMap.name == TILE_MAP_NAME_BORN_POS) {
-                        tileMap.GetComponent<TilemapRenderer>().enabled = false;
-                    }
-                }
-
-                if (tileMap.name == TILE_MAP_NAME_BORN_POS
-                    || tileMap.name == TILE_MAP_NAME_GRASS) {
-                    tileMapInfo.hasCollider = false;
-                }
-
+        Debug.Assert(go != null, "Can not find Grid in scene");
+        //init tilemap info
+        var maps = go.GetComponentsInChildren<Tilemap>();
+        for (int i = 0; i < maps.Length; i++) {
+            var tileMap = maps[i];
+            var tileMapInfo = info.GetMapInfo(tileMap.name);
+            if (tileMapInfo == null)
+                continue;
+            tileMapInfo.tilemap = tileMap;
+            tileMap.ClearAllTiles();
+            tileMap.SetTiles(tileMapInfo.GetAllPositions(), tileMapInfo.GetAllTiles());
+            if (Application.isPlaying) {
                 if (tileMap.name == TILE_MAP_NAME_BORN_POS) {
-                    tileMapInfo.isTagMap = true;
+                    tileMap.GetComponent<TilemapRenderer>().enabled = false;
                 }
+            }
+
+            if (tileMap.name == TILE_MAP_NAME_BORN_POS
+                || tileMap.name == TILE_MAP_NAME_GRASS) {
+                tileMapInfo.hasCollider = false;
+            }
+
+            if (tileMap.name == TILE_MAP_NAME_BORN_POS) {
+                tileMapInfo.isTagMap = true;
             }
         }
+
+        // resort tilemaps by layer
+        int count = maps.Length;
+        var tempMaps = go.GetComponentsInChildren<TileMapHelper>().ToList();
+        tempMaps.Sort((a, b) => { return b.layer - a.layer; }); //重排优先级
+        Debug.Assert(tempMaps.Count == count,
+            "Some tilemap do not have component!!" + typeof(TileMapHelper).ToString());
+        for (int i = 0; i < count; i++) {
+            maps[i] = tempMaps[i].GetComponent<Tilemap>();
+        }
+
+        var tempTileMaps = new TileInfos[count];
+        var tempNames = new string[count];
+        for (int i = 0; i < count; i++) {
+            var name = tempMaps[i].name;
+            tempNames[i] = name;
+            tempTileMaps[i] = info.GetMapInfo(name);
+        }
+
+        info.tileMaps = tempTileMaps;
+        info.names = tempNames;
 
         var min = new Vector2Int(int.MaxValue, int.MaxValue);
         var max = new Vector2Int(int.MinValue, int.MinValue);

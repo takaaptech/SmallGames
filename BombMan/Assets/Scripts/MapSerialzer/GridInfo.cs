@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using System.Collections.Generic;
-
+[System.Serializable]
 public class TileInfos {
     public Vector2Int min;
     public Vector2Int size;
@@ -97,7 +97,7 @@ public class TileInfos {
         return poss;
     }
 }
-
+[System.Serializable]
 public class GridInfo {
     public Vector3 cellSize;
     public Vector3 cellGap;
@@ -116,5 +116,9 @@ public class GridInfo {
         }
 
         return null;
+    }
+
+    public void SortByLayer(){
+        
     }
 }
